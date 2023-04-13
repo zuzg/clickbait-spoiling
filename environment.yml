@@ -1,0 +1,16 @@
+name: nlp
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - flake8
+  - mypy
+  - pytest
+  - jupyter
+  - pandas
+  - plotly
+  - numpy
+  - pytorch
+  - transformers
+  - pandas-stubs
