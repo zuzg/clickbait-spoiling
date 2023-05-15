@@ -24,6 +24,10 @@ def read_data(filename: str) -> pd.DataFrame:
     return df
 
 
+def get_encodings(df: pd.DataFrame):
+    ...
+
+
 class ClickbaitDataset(Dataset):
     def __init__(self, df: pd.DataFrame, tokenizer_model: str) -> None:
         super().__init__()
@@ -34,7 +38,7 @@ class ClickbaitDataset(Dataset):
         self.encodings.update({'encoding_ids': np.arange(len(df)),
                                "contexts": df.context.tolist(),
                                "questions": df.question.tolist()})
-        # optionally: add spoiler positions
+        # TODO: add spoiler positions
 
     def __len__(self) -> int:
         return len(self.encodings.input_ids)
