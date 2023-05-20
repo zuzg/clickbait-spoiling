@@ -15,7 +15,7 @@ def read_data(filename: str) -> pd.DataFrame:
     """
     data_json = [json.loads(i) for i in open(filename, 'r')]
     df = pd.DataFrame(
-        [{'id': i['uuid'],
+        [{'uuid': i['uuid'],
           'title': i['targetTitle'],
           'question': ' '.join(i['postText']),
           'context': i['targetTitle'] + ' - ' +
@@ -54,3 +54,10 @@ class ClickbaitDataset(Dataset):
             else:
                 batch[key] = torch.tensor(val[idx]).to(device)
         return batch
+
+
+def save_df_to_jsonl(df: pd.DataFrame, filepath: str) -> None:
+    spoilers = df[["uuid","spoiler"]]
+    json_output = spoilers.to_json(orient='records', lines=True)
+    with open(filepath, 'w') as f:
+        f.write(json_output)

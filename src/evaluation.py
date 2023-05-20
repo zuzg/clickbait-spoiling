@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# Official evaluation code from SemEval23
 import argparse
 from os.path import exists
 from glob import glob
@@ -155,28 +154,15 @@ def parse_args():
         required=True,
     )
     parser.add_argument(
-        "--ground_truth_classes",
-        type=str,
-        help='The ground truth classes used to evaluate submissions to task 1 (spoiler type generation). For the evaluation of task 2 (spoiler generation), this can be different from "--ground_truth_spoilers" to evaluate the effectiveness using real spoiler predictions.',
-        required=False,
-    )
-    parser.add_argument(
         "--ground_truth_spoilers",
         type=str,
         help="The ground truth spoilers used to evaluate submissions to task 2 (spoiler generation).",
         required=False,
     )
     parser.add_argument(
-        "--task",
-        type=str,
-        help="The task to evaluate. Choose 1 (spoiler type classification) or 2 (spoiler generation).",
-        choices=["1", "2"],
-        required=True,
-    )
-    parser.add_argument(
         "--output_prototext",
         type=str,
-        help="Write evalualuation results as prototext file to this location.",
+        help="Write evaluation results as prototext file to this location.",
         required=False,
     )
 
@@ -345,7 +331,7 @@ def create_protobuf_for_task_2(actual, expected):
     }
 
 
-def eval_task_2(input_run, ground_truth_classes, ground_truth_spoilers, output_file):
+def eval_task_2(input_run, ground_truth_spoilers, output_file):
     input_run = spoiler_generations_to_map(input_run)
     if ground_truth_spoilers == None:
         ret = to_prototext({"result-size": len(input_run.keys())})
@@ -380,11 +366,6 @@ def eval_task_2(input_run, ground_truth_classes, ground_truth_spoilers, output_f
 if __name__ == "__main__":
     args = parse_args()
     input_run = load_json_lines(args.input_run)
-    ground_truth_classes = (
-        None
-        if not args.ground_truth_classes
-        else load_json_lines(args.ground_truth_classes)
-    )
     ground_truth_spoilers = (
         None
         if not args.ground_truth_spoilers
@@ -393,7 +374,6 @@ if __name__ == "__main__":
 
     eval_task_2(
         input_run,
-        ground_truth_classes,
         ground_truth_spoilers,
         args.output_prototext,
     )
