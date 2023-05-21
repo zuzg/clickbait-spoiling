@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-import argparse
 from os.path import exists
 from glob import glob
 from os.path import isdir
@@ -14,8 +12,6 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 import string
 from bert_score import score
-import subprocess
-import tempfile
 from copy import deepcopy
 
 
@@ -63,36 +59,6 @@ def load_json_lines(f):
     return ret
 
 
-def spoiler_predictions_to_map(l, error=error, field="spoilerType"):
-    if l is None or len(l) == 0:
-        error("Spoiler predictions are empty.")
-    uuids = []
-
-    for i in l:
-        if "uuid" not in i.keys() or field not in i.keys():
-            error(
-                f'Spoiler predictions do not have all required fields. Expected fields "uuid" and "{field}". Got: '
-                + str(i)
-            )
-            return
-        uuids += [i["uuid"]]
-
-    if len(l) != len(set(uuids)):
-        error(
-            "Spoiler predictions have dupliates. I found "
-            + str(len(l))
-            + " entries but only "
-            + str(len(set(uuids)))
-            + " unique uuids."
-        )
-        return
-
-    success("Spoiler predictions have correct format. Found " + str(len(l)))
-    return {
-        i["uuid"]: i[field] if type(i[field]) is not list else i[field][0] for i in l
-    }
-
-
 def normalize_spoiler_generation(i, error, expected_spoiler_type=None):
     if "uuid" not in i or "spoiler" not in i:
         error(
@@ -101,8 +67,8 @@ def normalize_spoiler_generation(i, error, expected_spoiler_type=None):
         )
         return
 
-    if expected_spoiler_type and expected_spoiler_type not in i["tags"]:
-        return True
+    # if expected_spoiler_type and expected_spoiler_type not in i["tags"]:
+    #     return True
 
     return {i["uuid"]: i["spoiler"]}
 
@@ -140,33 +106,6 @@ def spoiler_generations_to_map(l, error=error, expected_spoiler_type=None):
             ret[k] = v
 
     return ret
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Evaluate submissions to the clickbait spoiling task."
-    )
-
-    parser.add_argument(
-        "--input_run",
-        type=str,
-        help="The input run (expected in jsonl format) produced by a system that should be evaluated.",
-        required=True,
-    )
-    parser.add_argument(
-        "--ground_truth_spoilers",
-        type=str,
-        help="The ground truth spoilers used to evaluate submissions to task 2 (spoiler generation).",
-        required=False,
-    )
-    parser.add_argument(
-        "--output_prototext",
-        type=str,
-        help="Write evaluation results as prototext file to this location.",
-        required=False,
-    )
-
-    return parser.parse_args()
 
 
 def to_prototext(d):
@@ -207,10 +146,6 @@ def f1_on(y_true, y_pred, filter_value):
 
 
 def bleu_score(truth, prediction):
-    """
-    From: https://github.com/webis-de/acl22-clickbait-spoiling/blob/470f488bd532da1e75812de6a94458ec80fdb2b9/evaluation/meteor-metric.py#L72
-    """
-
     def stopfilter(tokens):
         tmp = [token for token in tokens if token not in stopwords.words("english")]
         res = [token.lower() for token in tmp if token not in string.punctuation]
@@ -263,41 +198,6 @@ def bert_score(truth, prediction):
     return float(f1.mean())
 
 
-def meteor_score(truth, prediction):
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        assert len(truth) == len(prediction)
-
-        with open(tmpdirname + "/truths.txt", "w") as truths, open(
-            tmpdirname + "/preds.txt", "w"
-        ) as preds:
-            for t in truth:
-                truths.write(t + "\n")
-
-            for p in prediction:
-                preds.write(p + "\n")
-
-        cmd = [
-            "java",
-            "-Xmx2G",
-            "-jar",
-            "/meteor-1.5.jar",
-            tmpdirname + "/truths.txt",
-            tmpdirname + "/preds.txt",
-            "-l",
-            "en",
-            "-norm",
-            "-t",
-            "adq",
-        ]
-        meteor_output = subprocess.check_output(cmd).decode("utf-8")
-        try:
-            return float(meteor_output.split("\n\nFinal score:")[1].strip())
-        except:
-            raise ValueError(
-                'Could not extract the final score out of "' + meteor_output + '".'
-            )
-
-
 def create_protobuf_for_task_2(actual, expected):
     keys = sorted(expected.keys())
     missing_predictions = 0
@@ -321,17 +221,17 @@ def create_protobuf_for_task_2(actual, expected):
         else:
             missing_predictions += 1
             y_pred += [""]
-
     return {
         "result-size": len(keys),
         "bleu-score": bleu_score(y_true, y_pred),
         "bert-score": bert_score(y_true, y_pred),
-        "meteor-score": meteor_score(y_true, y_pred),
         "missing-predictions": missing_predictions,
     }
 
 
-def eval_task_2(input_run, ground_truth_spoilers, output_file):
+def eval_task_2(input_run, ground_truth_spoilers, output_file=None):
+    input_run = load_json_lines(input_run)
+    ground_truth_spoilers = load_json_lines(ground_truth_spoilers)
     input_run = spoiler_generations_to_map(input_run)
     if ground_truth_spoilers == None:
         ret = to_prototext({"result-size": len(input_run.keys())})
@@ -342,9 +242,9 @@ def eval_task_2(input_run, ground_truth_spoilers, output_file):
         ret = {}
         for display_name, tag_name in [
             ("all-spoilers", None),
-            ("phrase-spoilers", "phrase"),
-            ("passage-spoilers", "passage"),
-            ("multi-spoilers", "multi"),
+            # ("phrase-spoilers", "phrase"),
+            # ("passage-spoilers", "passage"),
+            # ("multi-spoilers", "multi"),
         ]:
             print("Run evaluation for " + display_name)
             filtered_ground_truth_spoilers = spoiler_generations_to_map(
@@ -355,25 +255,9 @@ def eval_task_2(input_run, ground_truth_spoilers, output_file):
                 input_run, filtered_ground_truth_spoilers
             ).items():
                 ret[k + "-" + display_name] = v
-
         ret = to_prototext(ret)
 
     if output_file:
         with open(output_file, "w") as f:
             f.write(ret)
-
-
-if __name__ == "__main__":
-    args = parse_args()
-    input_run = load_json_lines(args.input_run)
-    ground_truth_spoilers = (
-        None
-        if not args.ground_truth_spoilers
-        else load_json_lines(args.ground_truth_spoilers)
-    )
-
-    eval_task_2(
-        input_run,
-        ground_truth_spoilers,
-        args.output_prototext,
-    )
+    return ret
