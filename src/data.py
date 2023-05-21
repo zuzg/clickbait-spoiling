@@ -57,6 +57,13 @@ class ClickbaitDataset(Dataset):
 
 
 def save_df_to_jsonl(df: pd.DataFrame, filepath: str) -> None:
+    """
+    Save dataframe as jsonl file
+
+    :param df: dataframe with uuid and spoiler columns
+    :param filepath: where to save jsonl file
+    :return: None
+    """
     spoilers = df[["uuid","spoiler"]]
     json_output = spoilers.to_json(orient='records', lines=True)
     with open(filepath, 'w') as f:

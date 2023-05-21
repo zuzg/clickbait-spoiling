@@ -1,11 +1,6 @@
 from os.path import exists
 from glob import glob
 from os.path import isdir
-from sklearn.metrics import (
-    precision_score,
-    recall_score,
-    f1_score,
-)
 import json
 from nltk.translate.bleu_score import sentence_bleu
 from nltk.tokenize import word_tokenize
@@ -15,16 +10,32 @@ from bert_score import score
 from copy import deepcopy
 
 
-def error(msg):
+def error(msg: str) -> None:
+    """
+    Print success message nicely
+
+    :param msg: msg to print
+    """
     print("  [\033[91mx\033[0m] " + msg)
     exit(1)
 
 
-def success(msg):
+def success(msg: str) -> None:
+    """
+    Print success message nicely
+
+    :param msg: msg to print
+    """
     print("  [\033[92mo\033[0m] " + msg)
 
 
-def load_json_lines(f):
+def load_json_lines(f: str) -> dict:
+    """
+    Read jsonl file
+
+    :param f: filename
+    :return: file as dict
+    """
     if not exists(f):
         error('The file "' + f + '" does not exist.')
 
@@ -59,7 +70,13 @@ def load_json_lines(f):
     return ret
 
 
-def normalize_spoiler_generation(i, error, expected_spoiler_type=None):
+def normalize_spoiler_generation(i: dict, expected_spoiler_type: str = "") -> dict:
+    """
+    Normalize spoiler generations 
+    :param i: spoiler generations
+    :param expected_spoiler_type: type of spoiler
+    :return: normalized spoilers
+    """
     if "uuid" not in i or "spoiler" not in i:
         error(
             "Spoiler generation does not have all required fields. Expected fields are uuid and spoiler. Got: "
@@ -73,13 +90,19 @@ def normalize_spoiler_generation(i, error, expected_spoiler_type=None):
     return {i["uuid"]: i["spoiler"]}
 
 
-def spoiler_generations_to_map(l, error=error, expected_spoiler_type=None):
+def spoiler_generations_to_map(l: dict, expected_spoiler_type: str = "") -> dict:
+    """
+    Transform spoiler generations 
+    :param l: spoiler generations
+    :param expected_spoiler_type: type of spoiler
+    :return: map of spoilers
+    """
     if l is None or len(l) == 0:
         error("Spoiler predictions are empty.")
     uuids = []
 
     for i in deepcopy(l):
-        i = normalize_spoiler_generation(i, error, expected_spoiler_type)
+        i = normalize_spoiler_generation(i, expected_spoiler_type)
         if not i:
             return
         elif i is True:
@@ -95,7 +118,7 @@ def spoiler_generations_to_map(l, error=error, expected_spoiler_type=None):
             + " unique uuids."
         )
 
-    l = [normalize_spoiler_generation(i, error, expected_spoiler_type) for i in l]
+    l = [normalize_spoiler_generation(i, expected_spoiler_type) for i in l]
     l = [i for i in l if i and i is not True]
 
     success("Spoiler generations have correct format. Found " + str(len(l)))
@@ -108,44 +131,27 @@ def spoiler_generations_to_map(l, error=error, expected_spoiler_type=None):
     return ret
 
 
-def to_prototext(d):
-    ret = ""
+def to_prototext(d: dict) -> str:
+    """
+    Transform dict to prototext
 
+    :param d: dictionary
+    :return: string
+    """
+    ret = ""
     for k, v in d.items():
         ret += 'measure{\n  key: "' + str(k) + '"\n  value: "' + str(v) + '"\n}\n'
-
     return ret.strip()
 
 
-def filter_to(y_true, y_pred, filter_value):
-    y_true_filtered, y_pred_filtered = [], []
-    for i in range(len(y_true)):
-        if y_true[i] == filter_value or y_pred[i] == filter_value:
-            y_true_filtered += [1 if y_true[i] == filter_value else 0]
-            y_pred_filtered += [1 if y_pred[i] == filter_value else 0]
+def bleu_score(truth: list, prediction: list) -> float:
+    """
+    Calcualte BLEU score
 
-    return (y_true_filtered, y_pred_filtered)
-
-
-def precision_on(y_true, y_pred, filter_value):
-    y_true_filtered, y_pred_filtered = filter_to(y_true, y_pred, filter_value)
-
-    return precision_score(y_true_filtered, y_pred_filtered)
-
-
-def recall_on(y_true, y_pred, filter_value):
-    y_true_filtered, y_pred_filtered = filter_to(y_true, y_pred, filter_value)
-
-    return recall_score(y_true_filtered, y_pred_filtered)
-
-
-def f1_on(y_true, y_pred, filter_value):
-    y_true_filtered, y_pred_filtered = filter_to(y_true, y_pred, filter_value)
-
-    return f1_score(y_true_filtered, y_pred_filtered)
-
-
-def bleu_score(truth, prediction):
+    :param truth: true spoilers
+    :param prediction: predicted spoilers
+    :return: calculated score
+    """
     def stopfilter(tokens):
         tmp = [token for token in tokens if token not in stopwords.words("english")]
         res = [token.lower() for token in tmp if token not in string.punctuation]
@@ -191,14 +197,28 @@ def bleu_score(truth, prediction):
     return lem_score / len(truth)
 
 
-def bert_score(truth, prediction):
+def bert_score(truth: list, prediction: list) -> float:
+    """
+    Calcualte BERT score
+
+    :param truth: true spoilers
+    :param prediction: predicted spoilers
+    :return: calculated score
+    """
     assert len(truth) == len(prediction)
     prec, rec, f1 = score(prediction, truth, lang="en")
 
     return float(f1.mean())
 
 
-def create_protobuf_for_task_2(actual, expected):
+def create_protobuf_for_task_2(actual: dict, expected: dict) -> dict:
+    """
+    Calculate scores for spoilers
+
+    :param actual: predicted spoilers
+    :param expected: true spoilers
+    :return: dictionary with scores
+    """
     keys = sorted(expected.keys())
     missing_predictions = 0
 
@@ -229,7 +249,15 @@ def create_protobuf_for_task_2(actual, expected):
     }
 
 
-def eval_task_2(input_run, ground_truth_spoilers, output_file=None):
+def eval_task_2(input_run: str, ground_truth_spoilers: str, output_file: str = "") -> str:
+    """
+    Run evaluation on spoiler detection
+
+    :param input_run: file with genereted spoilers
+    :param ground_truth_spoilers: file with gt spoilers
+    :param output_file: (optional) where to save scores
+    :return: string with scores
+    """
     input_run = load_json_lines(input_run)
     ground_truth_spoilers = load_json_lines(ground_truth_spoilers)
     input_run = spoiler_generations_to_map(input_run)
