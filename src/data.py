@@ -1,4 +1,5 @@
 import json
+
 import numpy as np
 import pandas as pd
 import torch
@@ -13,14 +14,39 @@ def read_data(filename: str) -> pd.DataFrame:
     :param filename: name of the file to load
     :return: dataframe with contents of the provided file
     """
-    data_json = [json.loads(i) for i in open(filename, 'r')]
+    data_json = [json.loads(i) for i in open(filename, "r")]
     df = pd.DataFrame(
-        [{'uuid': i['uuid'],
-          'title': i['targetTitle'],
-          'question': ' '.join(i['postText']),
-          'context': i['targetTitle'] + ' - ' +
-          (' '.join(i['targetParagraphs'])),
-          'spoiler': i['spoiler']} for i in data_json])
+        [
+            {
+                "uuid": i["uuid"],
+                "title": i["targetTitle"],
+                "question": " ".join(i["postText"]),
+                "context": i["targetTitle"] + " - " + (" ".join(i["targetParagraphs"])),
+                "spoiler": i["spoiler"],
+            }
+            for i in data_json
+        ]
+    )
+    return df
+
+
+def read_data_classification(filename: str) -> pd.DataFrame:
+    """
+    Read data into dataframe from provided filename
+
+    :param filename: name of the file to load
+    :return: dataframe with contents of the provided file
+    """
+    data_json = [json.loads(i) for i in open(filename, "r")]
+    df = pd.DataFrame(
+        [
+            {
+                "context": " ".join(i["postText"]) + (" ".join(i["targetParagraphs"])),
+                "tags": 1 if i["tags"][0].lower() == "phrase" else 0,
+            }
+            for i in data_json
+        ]
+    )
     return df
 
 
@@ -34,10 +60,15 @@ class ClickbaitDataset(Dataset):
         self.df = df
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_model)
         self.encodings = self.tokenizer(
-            self.df.context, self.df.question, truncation=True, padding=True)
-        self.encodings.update({'encoding_ids': np.arange(len(df)),
-                               "contexts": df.context.tolist(),
-                               "questions": df.question.tolist()})
+            self.df.context, self.df.question, truncation=True, padding=True
+        )
+        self.encodings.update(
+            {
+                "encoding_ids": np.arange(len(df)),
+                "contexts": df.context.tolist(),
+                "questions": df.question.tolist(),
+            }
+        )
         # TODO: add spoiler positions
 
     def __len__(self) -> int:
@@ -57,7 +88,7 @@ class ClickbaitDataset(Dataset):
 
 
 def save_df_to_jsonl(df: pd.DataFrame, filepath: str) -> None:
-    spoilers = df[["uuid","spoiler"]]
-    json_output = spoilers.to_json(orient='records', lines=True)
-    with open(filepath, 'w') as f:
+    spoilers = df[["uuid", "spoiler"]]
+    json_output = spoilers.to_json(orient="records", lines=True)
+    with open(filepath, "w") as f:
         f.write(json_output)
