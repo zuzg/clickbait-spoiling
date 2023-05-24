@@ -1,13 +1,14 @@
 from os.path import exists
+from copy import deepcopy
 from glob import glob
 from os.path import isdir
+import string
 import json
 from nltk.translate.bleu_score import sentence_bleu
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
-import string
 from bert_score import score
-from copy import deepcopy
+import matplotlib.pyplot as plt
 
 
 def error(msg: str) -> None:
@@ -131,19 +132,6 @@ def spoiler_generations_to_map(l: dict, expected_spoiler_type: str = "") -> dict
     return ret
 
 
-def to_prototext(d: dict) -> str:
-    """
-    Transform dict to prototext
-
-    :param d: dictionary
-    :return: string
-    """
-    ret = ""
-    for k, v in d.items():
-        ret += 'measure{\n  key: "' + str(k) + '"\n  value: "' + str(v) + '"\n}\n'
-    return ret.strip()
-
-
 def bleu_score(truth: list, prediction: list) -> float:
     """
     Calcualte BLEU score
@@ -249,7 +237,7 @@ def create_protobuf_for_task_2(actual: dict, expected: dict) -> dict:
     }
 
 
-def eval_task_2(input_run: str, ground_truth_spoilers: str, output_file: str = "") -> str:
+def eval_task_2(input_run: str, ground_truth_spoilers: str, output_file: str = "") -> dict:
     """
     Run evaluation on spoiler detection
 
@@ -261,13 +249,13 @@ def eval_task_2(input_run: str, ground_truth_spoilers: str, output_file: str = "
     input_run = load_json_lines(input_run)
     ground_truth_spoilers = load_json_lines(ground_truth_spoilers)
     input_run = spoiler_generations_to_map(input_run)
+    result_dict = dict()
     if ground_truth_spoilers == None:
-        ret = to_prototext({"result-size": len(input_run.keys())})
+        result_dict["result-size"] = len(input_run.keys())
         success(
             "No ground-truth is passed. I tested the input run and the input run is valid."
         )
     else:
-        ret = {}
         for display_name, tag_name in [
             ("all-spoilers", None),
             ("phrase-spoilers", "phrase"),
@@ -282,10 +270,28 @@ def eval_task_2(input_run: str, ground_truth_spoilers: str, output_file: str = "
             for k, v in create_protobuf_for_task_2(
                 input_run, filtered_ground_truth_spoilers
             ).items():
-                ret[k + "-" + display_name] = v
-        ret = to_prototext(ret)
+                result_dict[f"{k}-{display_name}"] = v
 
     if output_file:
         with open(output_file, "w") as f:
-            f.write(ret)
-    return ret
+            f.write(json.dumps(result_dict))
+    return result_dict
+
+
+def plot_scores(scores: dict) -> None:
+    """
+    Plot comparing scores and number of spoilers
+
+    :param scores: dict with scores
+    :return: none
+    """
+    plots = ["bleu", "bert", "size"]
+    labels = ["all-spoilers", "phrase-spoilers", "passage-spoilers" , "multi-spoilers"]
+    fig, axs = plt.subplots(1, 3, figsize=(12,5))
+    for i, p in enumerate(plots):
+        axs[i].set_title(p)
+        axs[i].set_xticklabels(labels, rotation=45)
+        for key, val in scores.items():
+            if p in key:
+                axs[i].bar(key, val)
+    fig.show()
