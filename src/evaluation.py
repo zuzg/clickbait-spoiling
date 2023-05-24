@@ -9,6 +9,7 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from bert_score import score
 import matplotlib.pyplot as plt
+from typing import Any
 
 
 def error(msg: str) -> None:
@@ -30,7 +31,7 @@ def success(msg: str) -> None:
     print("  [\033[92mo\033[0m] " + msg)
 
 
-def load_json_lines(f: str) -> dict:
+def load_json_lines(f: str) -> list:
     """
     Read jsonl file
 
@@ -44,13 +45,13 @@ def load_json_lines(f: str) -> dict:
     num = 1
 
     if isdir(f):
-        f = glob(f + "/*.json*")
-        if len(f) != 1:
+        fd = glob(f + "/*.json*")
+        if len(fd) != 1:
             error(
                 "The input is an directory that contains multiple json files. Please create only a single json file. Got "
-                + str(f)
+                + str(fd)
             )
-        f = f[0]
+        f = fd[0]
 
     with open(f, "r") as inp:
         for l in inp:
@@ -71,7 +72,7 @@ def load_json_lines(f: str) -> dict:
     return ret
 
 
-def normalize_spoiler_generation(i: dict, expected_spoiler_type: str = "") -> dict:
+def normalize_spoiler_generation(i: dict, expected_spoiler_type: str = "") -> Any:
     """
     Normalize spoiler generations 
     :param i: spoiler generations
@@ -91,7 +92,7 @@ def normalize_spoiler_generation(i: dict, expected_spoiler_type: str = "") -> di
     return {i["uuid"]: i["spoiler"]}
 
 
-def spoiler_generations_to_map(l: dict, expected_spoiler_type: str = "") -> dict:
+def spoiler_generations_to_map(l: list, expected_spoiler_type: Any = None) -> dict:
     """
     Transform spoiler generations 
     :param l: spoiler generations
@@ -105,7 +106,7 @@ def spoiler_generations_to_map(l: dict, expected_spoiler_type: str = "") -> dict
     for i in deepcopy(l):
         i = normalize_spoiler_generation(i, expected_spoiler_type)
         if not i:
-            return
+            return {}
         elif i is True:
             continue
         uuids += list(i.keys())
@@ -119,12 +120,12 @@ def spoiler_generations_to_map(l: dict, expected_spoiler_type: str = "") -> dict
             + " unique uuids."
         )
 
-    l = [normalize_spoiler_generation(i, expected_spoiler_type) for i in l]
-    l = [i for i in l if i and i is not True]
+    ln = [normalize_spoiler_generation(i, expected_spoiler_type) for i in l]
+    ln = [i for i in ln if i and i is not True]
 
-    success("Spoiler generations have correct format. Found " + str(len(l)))
+    success("Spoiler generations have correct format. Found " + str(len(ln)))
     ret = {}
-    for i in l:
+    for i in ln:
         for k, v in i.items():
             assert k not in ret
             ret[k] = v
@@ -162,11 +163,7 @@ def bleu_score(truth: list, prediction: list) -> float:
             print("\n")
 
         return sentence_bleu([trut], predi, weights=weights)
-
-    score = 0.0
     lem_score = 0.0
-
-    write_dict = {"single_scores": {}, "scores": {}}
 
     for i in range(len(truth)):
         real_answer = truth[i]
@@ -246,12 +243,12 @@ def eval_task_2(input_run: str, ground_truth_spoilers: str, output_file: str = "
     :param output_file: (optional) where to save scores
     :return: string with scores
     """
-    input_run = load_json_lines(input_run)
-    ground_truth_spoilers = load_json_lines(ground_truth_spoilers)
-    input_run = spoiler_generations_to_map(input_run)
+    input_run_list = load_json_lines(input_run)
+    gt_spoilers_dict = load_json_lines(ground_truth_spoilers)
+    input_run_dict = spoiler_generations_to_map(input_run_list)
     result_dict = dict()
-    if ground_truth_spoilers == None:
-        result_dict["result-size"] = len(input_run.keys())
+    if gt_spoilers_dict == None:
+        result_dict["result-size"] = len(input_run_dict.keys())
         success(
             "No ground-truth is passed. I tested the input run and the input run is valid."
         )
@@ -264,11 +261,10 @@ def eval_task_2(input_run: str, ground_truth_spoilers: str, output_file: str = "
         ]:
             print("Run evaluation for " + display_name)
             filtered_ground_truth_spoilers = spoiler_generations_to_map(
-                deepcopy(ground_truth_spoilers), expected_spoiler_type=tag_name
-            )
+                deepcopy(gt_spoilers_dict), tag_name)
 
             for k, v in create_protobuf_for_task_2(
-                input_run, filtered_ground_truth_spoilers
+                input_run_dict, filtered_ground_truth_spoilers
             ).items():
                 result_dict[f"{k}-{display_name}"] = v
 
