@@ -84,8 +84,8 @@ def normalize_spoiler_generation(i: dict, expected_spoiler_type: str = "") -> di
         )
         return
 
-    # if expected_spoiler_type and expected_spoiler_type not in i["tags"]:
-    #     return True
+    if expected_spoiler_type and expected_spoiler_type not in i["tags"]:
+        return True
 
     return {i["uuid"]: i["spoiler"]}
 
@@ -270,9 +270,9 @@ def eval_task_2(input_run: str, ground_truth_spoilers: str, output_file: str = "
         ret = {}
         for display_name, tag_name in [
             ("all-spoilers", None),
-            # ("phrase-spoilers", "phrase"),
-            # ("passage-spoilers", "passage"),
-            # ("multi-spoilers", "multi"),
+            ("phrase-spoilers", "phrase"),
+            ("passage-spoilers", "passage"),
+            ("multi-spoilers", "multi"),
         ]:
             print("Run evaluation for " + display_name)
             filtered_ground_truth_spoilers = spoiler_generations_to_map(
