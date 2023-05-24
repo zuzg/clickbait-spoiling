@@ -1,6 +1,6 @@
 from unittest.mock import patch, mock_open
 
-from src.data import read_data, save_df_to_jsonl
+from src.data import read_data
 
 
 def test_read_data(data_jsonl):
