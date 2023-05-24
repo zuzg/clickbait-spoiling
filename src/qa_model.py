@@ -52,12 +52,12 @@ def get_passage(row, model_passage):
             candidates.append(sentence.strip())
 
     if not candidates:
-        print("No candidates found")
+        # print("No candidates found")
         return [""]
     elif len(candidates) == 1:
         return [candidates[0]]
     elif len(candidates) > 1:
-        print("Multiple candidates found")
+        # print("Multiple candidates found")
         return [candidates[0]]
 
 
@@ -74,7 +74,7 @@ def get_multi(row, model_multi):
             results.append(current_result)
             current_context = re.sub(current_result, "", current_context)
     except:
-        print("Error generating multipart spoiler")
+        # print("Error generating multipart spoiler")
         results = ["Error"]
     return results
 
@@ -90,28 +90,17 @@ def predict(inputs, model_phrase, model_passage, model_multi):
         elif row.get("tags") == ["multi"]:
             answer = get_multi(row, model_multi)
         else:
-            print("Tag not found")
+            # print("Tag not found")
             raise NotImplemented
 
         yield {"uuid": row["uuid"], "spoiler": answer}
 
 
-def run_baseline(input_file, output_file, model_phrase, model_passage, model_multi):
+def run_qa_model(input_file, output_file, model_name="deepset/roberta-base-squad2"):
+    model = QaModel(model_name)
+    model_multi = QaModel(model_name, 5)
     with open(input_file, "r") as inp, open(output_file, "w") as out:
         inp = [json.loads(i) for i in inp]
 
-        for output in predict(inp, model_phrase, model_passage, model_multi):
+        for output in predict(inp, model, model, model_multi):
             out.write(json.dumps(output) + "\n")
-
-
-def run_qa_model(input_file, output_file):
-    model_name = "deepset/roberta-base-squad2"
-    model = QaModel(model_name)
-    model_multi = QaModel(model_name, 5)
-    run_baseline(
-        input_file,
-        output_file,
-        model_phrase=model,
-        model_passage=model,
-        model_multi=model_multi,
-    )

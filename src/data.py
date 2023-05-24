@@ -30,6 +30,26 @@ def read_data(filename: str) -> pd.DataFrame:
     return df
 
 
+def read_spoilers(filename: str) -> pd.DataFrame:
+    """
+    Read data into dataframe with uuid and spoiler from provided filename
+
+    :param filename: name of the file to load
+    :return: dataframe with uuid and spoiler
+    """
+    data_json = [json.loads(i) for i in open(filename, "r")]
+    df = pd.DataFrame(
+        [
+            {
+                "uuid": i["uuid"],
+                "spoiler": i["spoiler"],
+            }
+            for i in data_json
+        ]
+    )
+    return df
+
+
 def read_data_classification(filename: str) -> pd.DataFrame:
     """
     Read data into dataframe from provided filename

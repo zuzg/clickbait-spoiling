@@ -13,4 +13,6 @@ dependencies:
   - numpy
   - pytorch
   - transformers
+  - nltk
+  - bert_score
   - pandas-stubs
