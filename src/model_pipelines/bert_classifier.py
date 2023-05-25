@@ -138,3 +138,50 @@ def finetune_BERT(epochs, dataloader, model, loss_fn, optimizer):
             loop.set_postfix(loss=loss.item(), acc=accuracy)
 
     return model
+
+
+def prepare_input_bert_classifier(input_text, tokenizer, max_length=512):
+    """
+    Prepare input for BERT Classifier
+
+    :param input_text: Input text
+    :param tokenizer: BertTokenizer
+    :param max_length: Maximum length of the input sequence
+    :return: Dictionary of input_ids, attention_mask and token_type_ids
+    """
+    inputs = tokenizer.encode_plus(
+        input_text,
+        None,
+        add_special_tokens=True,
+        return_attention_mask=True,
+        max_length=max_length,
+        truncation=True,
+    )
+
+    ids = inputs["input_ids"]
+    token_type_ids = inputs["token_type_ids"]
+    mask = inputs["attention_mask"]
+
+    return {
+        "ids": torch.tensor(ids, dtype=torch.long),
+        "mask": torch.tensor(mask, dtype=torch.long),
+        "token_type_ids": torch.tensor(token_type_ids, dtype=torch.long),
+    }
+
+
+def predict_spoiler_class_from_text(text, model, tokenizer):
+    """
+    Predict spoiler class from text
+
+    :param text: Input text
+    :param model: Finetuned BERTClassifier
+    :param tokenizer: BertTokenizer
+    :return: 1 if 'phrase', 0 if 'passage'/'multi'
+    """
+    input = prepare_input_bert_classifier(text, tokenizer)
+    output = model(
+        input["ids"].unsqueeze(0),
+        input["mask"].unsqueeze(0),
+        input["token_type_ids"].unsqueeze(0),
+    ).item()
+    return 1 if output >= 0 else 0

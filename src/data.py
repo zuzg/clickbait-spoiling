@@ -22,7 +22,9 @@ def read_data(filename: str) -> pd.DataFrame:
                 "title": i["targetTitle"],
                 "question": " ".join(i["postText"]),
                 "context": i["targetTitle"] + " - " + (" ".join(i["targetParagraphs"])),
+                "context_classification": " ".join(i["postText"]) + " " + (" ".join(i["targetParagraphs"])),
                 "spoiler": i["spoiler"],
+                "tags": 1 if i["tags"][0].lower() == "phrase" else 0,
             }
             for i in data_json
         ]
@@ -61,7 +63,7 @@ def read_data_classification(filename: str) -> pd.DataFrame:
     df = pd.DataFrame(
         [
             {
-                "context": " ".join(i["postText"]) + (" ".join(i["targetParagraphs"])),
+                "context": " ".join(i["postText"]) + " " + (" ".join(i["targetParagraphs"])),
                 "tags": 1 if i["tags"][0].lower() == "phrase" else 0,
             }
             for i in data_json
