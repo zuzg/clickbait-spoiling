@@ -21,7 +21,7 @@ def read_data(filename: str) -> pd.DataFrame:
                 "uuid": i["uuid"],
                 "title": i["targetTitle"],
                 "question": " ".join(i["postText"]),
-                "context": i["targetTitle"] + " - " + (" ".join(i["targetParagraphs"])),
+                "context": i["targetParagraphs"],
                 "context_classification": " ".join(i["postText"]) + " " + (" ".join(i["targetParagraphs"])),
                 "spoiler": i["spoiler"],
                 "positions": i["spoilerPositions"],

@@ -8,4 +8,13 @@ def test_read_data(data_jsonl):
     file_content = data_jsonl
     with patch("builtins.open", mock_open(read_data=file_content)):
         df = read_data(filepath)
-        assert list(df.columns) == ['uuid', 'title', 'question', 'context', 'spoiler']
+        assert list(df.columns) == [
+            "uuid",
+            "title",
+            "question",
+            "context",
+            "context_classification",
+            "spoiler",
+            "positions",
+            "tags",
+        ]

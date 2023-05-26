@@ -10,8 +10,11 @@ def data_jsonl():
         "postText": ["postText"],
         "targetTitle": ["targetTitle"],
         "targetParagraphs": ["targetParagraphs"],
-        "spoiler": ["spoiler"],
         "blabla": ["blablabla"],
+        "context_classification": ["asdf"],
+        "spoiler": ["spoiler"],
+        "spoilerPositions": ["spoilerPositions"],
+        "tags": ["phrase"],
     }
     df = pd.DataFrame.from_dict(data)
     jsonl = df.to_json(orient="records", lines=True)

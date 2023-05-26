@@ -1,3 +1,4 @@
+import pandas as pd
 from datasets import Dataset
 from transformers import (
     AutoTokenizer,
@@ -13,10 +14,35 @@ MODEL_CHECKPOINT = "deepset/roberta-base-squad2"
 TOKENIZER = AutoTokenizer.from_pretrained(MODEL_CHECKPOINT)
 
 
-def tokenize_function(dataset):
+def flat_position(context: list, pos: list, answer: str) -> tuple:
+    """
+    Map paragraph positions to flat positions
+
+    :param context: context of the answer
+    :param pos: paragraph style position
+    :param answer: spoiler
+    :return: flat start and flat end
+    """
+    start_p = pos[0][0][0]
+    flat_start = pos[0][0][1]
+    count = 0
+    for i in range(start_p):
+        count += len(context[i])
+    flat_start += count
+    flat_end = flat_start + len(answer)
+    return flat_start, flat_end
+
+
+def tokenize_function(dataset: Dataset) -> dict:
+    """
+    Tokenize dataset
+
+    :param dataset: dataset to be tokenized
+    :return: tokenized dataset
+    """
     inputs = TOKENIZER(
         dataset["question"],
-        dataset["context"],
+        dataset["flat_context"],
         max_length=500,
         padding="max_length",
         truncation="only_second",
@@ -25,12 +51,12 @@ def tokenize_function(dataset):
     offset_mapping = inputs.pop("offset_mapping")
     answers = dataset["spoiler"]
     positions = dataset["positions"]
+    contexts = dataset["context"]
     start_positions = []
     end_positions = []
 
-    for i, (answer, pos, offset) in enumerate(zip(answers, positions, offset_mapping)):
-        start_char = pos[0][0][0]
-        end_char = start_char + len(answer[0])
+    for i, (context, answer, pos, offset) in enumerate(zip(contexts, answers, positions, offset_mapping)):
+        start_char, end_char = flat_position(context, pos, answer[0])
         sequence_ids = inputs.sequence_ids(i)
 
         # Find the start and end of the context
@@ -62,12 +88,26 @@ def tokenize_function(dataset):
     return inputs
 
 
-def get_tokenized_dataset(df):
+def get_tokenized_dataset(df: pd.DataFrame) -> Dataset:
+    """
+    Tokenize dataset
+
+    :param df: dataframe to tokenize
+    :return: tokenized dataset
+    """
+    df["flat_context"] = ["".join(p) for p in df["context"]]
     dataset = Dataset.from_pandas(df)
     return dataset.map(tokenize_function, batched=True)
 
 
-def prepare_training(train_dataset, eval_dataset):
+def prepare_training(train_dataset: Dataset, eval_dataset: Dataset) -> Trainer:
+    """
+    Prepare training
+
+    :param train_dataset: train dataset
+    :param train_eval: eval dataset
+    :return: trainer object
+    """
     model = AutoModelForQuestionAnswering.from_pretrained(MODEL_CHECKPOINT)
 
     training_args = TrainingArguments(
@@ -87,7 +127,13 @@ def prepare_training(train_dataset, eval_dataset):
     return trainer
 
 
-def finetune_roberta(train_file, eval_file):
+def finetune_roberta(train_file: str, eval_file: str) -> None:
+    """
+    Perform RoBERTa finetuning on custom data
+
+    :param train_file: path to train dataset
+    :param eval_file: path to eval dataset
+    """
     train_df = read_data(train_file)
     eval_df = read_data(eval_file)
     train_dataset = get_tokenized_dataset(train_df)
