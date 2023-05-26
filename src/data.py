@@ -1,10 +1,5 @@
 import json
-
-import numpy as np
 import pandas as pd
-import torch
-from torch.utils.data import Dataset
-from transformers import AutoTokenizer
 
 
 def read_data(filename: str) -> pd.DataFrame:
@@ -71,43 +66,6 @@ def read_data_classification(filename: str) -> pd.DataFrame:
         ]
     )
     return df
-
-
-def get_encodings(df: pd.DataFrame):
-    ...
-
-
-class ClickbaitDataset(Dataset):
-    def __init__(self, df: pd.DataFrame, tokenizer_model: str) -> None:
-        super().__init__()
-        self.df = df
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_model)
-        self.encodings = self.tokenizer(
-            self.df.context, self.df.question, truncation=True, padding=True
-        )
-        self.encodings.update(
-            {
-                "encoding_ids": np.arange(len(df)),
-                "contexts": df.context.tolist(),
-                "questions": df.question.tolist(),
-            }
-        )
-        # TODO: add spoiler positions
-
-    def __len__(self) -> int:
-        return len(self.encodings.input_ids)
-
-    def __getitem__(self, idx: int) -> dict:
-        device = "cpu"
-        if torch.cuda.is_available():
-            device = "cuda"
-        batch = {}
-        for key, val in self.encodings.items():
-            if type(val[idx]) == str or isinstance(val[idx], tuple):
-                batch[key] = val[idx]
-            else:
-                batch[key] = torch.tensor(val[idx]).to(device)
-        return batch
 
 
 def save_df_to_jsonl(df: pd.DataFrame, filepath: str) -> None:

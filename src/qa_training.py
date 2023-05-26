@@ -29,7 +29,7 @@ def flat_position(context: list, pos: list, answer: str) -> tuple:
     for i in range(start_p):
         count += len(context[i])
     flat_start += count
-    flat_end = flat_start + len(answer)
+    flat_end = flat_start + len(answer) - 1
     return flat_start, flat_end
 
 
