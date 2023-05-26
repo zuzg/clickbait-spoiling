@@ -4,15 +4,23 @@ import torch
 from transformers import AutoTokenizer
 from transformers import pipeline
 from tqdm import tqdm
+from collections.abc import Generator
 
 
 class QaModel:
-    def __init__(self, model_name, num_answers=1):
+    """
+    Class for QA model
+    """
+    def __init__(self, model_name: str, num_answers: int = 1):
+        """
+        :param model_name: path to the model
+        :param num_answers: number of expected answers
+        """
         if torch.cuda.is_available():
             self.device = 0
             print("Using GPU for pipeline")
         else:
-            self.device = -1            
+            self.device = -1
         self.model_name = model_name
         self.num_answers = num_answers
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
@@ -28,19 +36,38 @@ class QaModel:
             top_k=self.num_answers,
         )
 
-    def predict(self, question, context):
+    def predict(self, question: str, context: str) -> str:
+        """
+        Run prediction
+
+        :param question: clickbait question
+        :param context: context
+        :return: spoiler
+        """
         answer = self.model(question=question, context=context)
         return answer
 
 
-def get_phrase(row, model_phrase):
+def get_phrase(row: dict, model_phrase: QaModel) -> list:
+    """
+    Get results for multi phrase
+
+    :param row: row
+    :param model_phrase: model for phrase spoiler generation
+    """
     question = row.get("postText")[0]
     context = " ".join(row.get("targetParagraphs"))
 
     return [model_phrase.predict(question, context)["answer"]]
 
 
-def get_passage(row, model_passage):
+def get_passage(row: dict, model_passage: QaModel) -> list:
+    """
+    Get results for passage spoiler
+
+    :param row: row
+    :param model_passage: model for passage spoiler generation
+    """
     question = row.get("postText")[0]
     context = " ".join(row.get("targetParagraphs"))
 
@@ -59,9 +86,16 @@ def get_passage(row, model_passage):
     elif len(candidates) > 1:
         # print("Multiple candidates found")
         return [candidates[0]]
+    return [""]
 
 
-def get_multi(row, model_multi):
+def get_multi(row: dict, model_multi: QaModel) -> list:
+    """
+    Get results for multi spoiler
+
+    :param row: row
+    :param model_multi: model for multi spoiler generation
+    """
     question = row.get("postText")[0]
     context = " ".join(row.get("targetParagraphs"))
 
@@ -79,7 +113,17 @@ def get_multi(row, model_multi):
     return results
 
 
-def predict(inputs, model_phrase, model_passage, model_multi):
+def predict(
+    inputs: list, model_phrase: QaModel, model_passage: QaModel, model_multi: QaModel
+) -> Generator[dict, None, None]:
+    """
+    Run prediction for model
+
+    :param inputs: list with inputs
+    :param model_phrase: model for phrase generation
+    :param model_passage: model for passage generation
+    :param model_multi: model for multi generation
+    """
     for row in tqdm(inputs):
         if row.get("tags") == ["phrase"]:
             answer = get_phrase(row, model_phrase)
@@ -96,11 +140,25 @@ def predict(inputs, model_phrase, model_passage, model_multi):
         yield {"uuid": row["uuid"], "spoiler": answer}
 
 
-def run_qa_model(input_file, output_file, model_name="deepset/roberta-base-squad2"):
-    model = QaModel(model_name)
-    model_multi = QaModel(model_name, 5)
-    with open(input_file, "r") as inp, open(output_file, "w") as out:
-        inp = [json.loads(i) for i in inp]
+def run_inference(
+    input_file: str,
+    output_file: str,
+    model_qa: str = "deepset/roberta-base-squad2",
+    model_pr: str = "",
+) -> None:
+    """
+    Run spoiler generation
 
-        for output in predict(inp, model, model, model_multi):
+    :param input_file: input
+    :param output_file: where to save generated spoilers
+    :param model_qa: question answering model path
+    :param model_pr: passage retrieval model path
+    """
+    model = QaModel(model_qa)
+    # TODO add passage retrieval model here
+    model_multi = QaModel(model_qa, 5)
+    with open(input_file, "r") as inp, open(output_file, "w") as out:
+        inp_list = [json.loads(i) for i in inp]
+
+        for output in predict(inp_list, model, model, model_multi):
             out.write(json.dumps(output) + "\n")
