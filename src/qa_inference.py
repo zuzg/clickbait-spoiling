@@ -19,7 +19,7 @@ class QaModel:
         self.model = pipeline(
             "question-answering",
             self.model_name,
-            tokeniezer=self.tokenizer,
+            tokenizer=self.tokenizer,
             device=self.device,
             max_length=500,
             truncation=True,

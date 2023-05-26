@@ -24,6 +24,7 @@ def read_data(filename: str) -> pd.DataFrame:
                 "context": i["targetTitle"] + " - " + (" ".join(i["targetParagraphs"])),
                 "context_classification": " ".join(i["postText"]) + " " + (" ".join(i["targetParagraphs"])),
                 "spoiler": i["spoiler"],
+                "positions": i["spoilerPositions"],
                 "tags": 1 if i["tags"][0].lower() == "phrase" else 0,
             }
             for i in data_json
