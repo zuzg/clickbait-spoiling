@@ -1,6 +1,4 @@
-import pandas as pd
-import numpy as np
-from datasets import Dataset, load_metric
+from datasets import Dataset
 from transformers import (
     AutoTokenizer,
     Trainer,
@@ -69,14 +67,6 @@ def get_tokenized_dataset(df):
     return dataset.map(tokenize_function, batched=True)
 
 
-def compute_metrics(eval_pred):
-    # TODO
-    metric = load_metric("accuracy")
-    logits, labels = eval_pred
-    predictions = np.argmax(logits, axis=-1)
-    return metric.compute(predictions=predictions, references=labels)
-
-
 def prepare_training(train_dataset, eval_dataset):
     model = AutoModelForQuestionAnswering.from_pretrained(MODEL_CHECKPOINT)
 
@@ -84,6 +74,7 @@ def prepare_training(train_dataset, eval_dataset):
         output_dir="./data/roberta-finetuned",
         evaluation_strategy="epoch",
         num_train_epochs=5,
+        fp16=True,
     )
 
     trainer = Trainer(
@@ -91,7 +82,6 @@ def prepare_training(train_dataset, eval_dataset):
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        # compute_metrics=compute_metrics,
         tokenizer=TOKENIZER,
     )
     return trainer
@@ -102,7 +92,8 @@ def finetune_roberta(train_file, eval_file):
     eval_df = read_data(eval_file)
     train_dataset = get_tokenized_dataset(train_df)
     validation_dataset = get_tokenized_dataset(eval_df)
-    small_train_dataset = train_dataset.shuffle(seed=42).select(range(100))
-    small_eval_dataset = validation_dataset.shuffle(seed=42).select(range(20))
+    small_train_dataset = train_dataset.shuffle(seed=42).select(range(1000))
+    small_eval_dataset = validation_dataset.shuffle(seed=42).select(range(200))
     trainer = prepare_training(small_train_dataset, small_eval_dataset)
     trainer.train()
+    trainer.save_model("./data/roberta-finetuned")
