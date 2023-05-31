@@ -175,15 +175,18 @@ def prepare_input_bert_classifier(input_text, tokenizer, max_length=512):
     }
 
 
-def predict_spoiler_class_from_text(text, model, tokenizer):
+def predict_spoiler_class_from_text(
+    text: str, model: BERTClassifier, model_checkpoint: str = "bert-base-uncased"
+):
     """
     Predict spoiler class from text
 
     :param text: Input text
     :param model: Finetuned BERTClassifier
-    :param tokenizer: BertTokenizer
+    :param model_checkpoint: Model checkpoint
     :return: 1 if 'phrase', 0 if 'passage'/'multi'
     """
+    tokenizer = transformers.BertTokenizer.from_pretrained(model_checkpoint)
     input = prepare_input_bert_classifier(text, tokenizer)
     output = model(
         input["ids"].unsqueeze(0),

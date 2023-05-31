@@ -129,7 +129,8 @@ def predict(
     model_passage: Reranker,
     model_multi: QaModel,
     use_pr: bool = False,
-) -> Generator:
+    user: bool = False,
+):
     """
     Run prediction for model
 
@@ -150,6 +151,10 @@ def predict(
         else:
             answer = get_multi(row, model_multi)
 
+        if user:
+            return answer
+
+        print("Answer: ", answer)
         yield {"uuid": row["uuid"], "spoiler": answer}
 
 
@@ -179,3 +184,28 @@ def run_inference(
 
         for output in predict(inp_list, model, model_pr, model_multi, use_pr):
             out.write(json.dumps(output) + "\n")
+
+
+def user_inference(
+    data: dict,
+    model_qa: str = "deepset/roberta-base-squad2",
+    model_pr: Reranker = None,
+    use_pr: bool = False,
+) -> None:
+    """
+    Run spoiler generation
+
+    :data: input
+    :param model_qa: question answering model path
+    :param model_pr: passage retrieval model path
+    """
+    if model_pr is None:
+        model_pr = MonoBERT()
+
+    model = QaModel(model_qa)
+    model_multi = QaModel(model_qa, 5)
+
+    data["uuid"] = "user_input"
+    output = predict([data], model, model_pr, model_multi, use_pr, user=True)
+    print(output)
+    return output

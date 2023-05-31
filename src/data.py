@@ -1,6 +1,10 @@
 import json
+import re
+import time
 
 import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 from nltk import sent_tokenize
 
 
@@ -13,6 +17,7 @@ def get_sentences(paragraphs) -> list:
         for sentence in sent_tokenize(paragraph):
             sentences += [sentence]
     return sentences
+
 
 def read_data(filename: str) -> pd.DataFrame:
     """
@@ -97,3 +102,61 @@ def save_df_to_jsonl(df: pd.DataFrame, filepath: str) -> None:
     json_output = spoilers.to_json(orient="records", lines=True)
     with open(filepath, "w") as f:
         f.write(json_output)
+
+
+def clean_text(text):
+    """
+    Clean text from email addresses, urls and extra spaces.
+
+    :param text: text to clean
+    :return: cleaned text
+    """
+    text = re.sub(r"\S+@\S+", "", text)
+    text = re.sub(r"http\S+", "", text)
+    text = re.sub(r"\s+", " ", text)
+    text = text.strip()
+    return text
+
+
+def get_target_paragraphs(link):
+    """
+    Get target paragraphs from the provided link.
+
+    :param link: link to the article
+    :return: list of target paragraphs
+    """
+    max_retries = 5
+
+    for retry in range(max_retries):
+        response = requests.get(link)
+
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, "html.parser")
+            paragraphs = soup.find_all("p")
+
+            target_paragraphs = [clean_text(p.get_text()) for p in paragraphs]
+            return target_paragraphs
+        elif response.status_code == 429:
+            # rate limit exceeded, wait for a few seconds...
+            wait_time = 5
+            print(f"Rate limit exceeded. Retrying in {wait_time} seconds...")
+            time.sleep(wait_time)
+        else:
+            return []
+    return []
+
+
+def create_user_data(postText: str, target_paragraphs: str, prediction: str) -> dict:
+    """
+    Create user data from provided postText, target_paragraphs and prediction.
+
+    :param postText: postText from the user
+    :param target_paragraphs: target_paragraphs from the user
+    :param prediction: prediction from the model
+    :return: dictionary with postText, target_paragraphs and prediction
+    """
+    data = dict()
+    data["postText"] = postText
+    data["targetParagraphs"] = target_paragraphs
+    data["tags"] = prediction
+    return data
