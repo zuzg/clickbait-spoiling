@@ -1,10 +1,10 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.optim as optim
 import transformers
 from torch.utils.data import Dataset
 from tqdm import tqdm
-import torch.optim as optim
 
 
 class BertDataset(Dataset):
@@ -87,7 +87,9 @@ class BERTClassifier(nn.Module):
         return out
 
 
-def finetune_BERT(epochs, dataloader, model, loss_fn = nn.BCEWithLogitsLoss(), optimizer = None):
+def finetune_BERT(
+    epochs, dataloader, model, loss_fn=nn.BCEWithLogitsLoss(), optimizer=None
+):
     """
     Finetune BERT model for Clickbait Spoiler Classification
     :param epochs: Number of epochs to train
@@ -188,4 +190,4 @@ def predict_spoiler_class_from_text(text, model, tokenizer):
         input["mask"].unsqueeze(0),
         input["token_type_ids"].unsqueeze(0),
     ).item()
-    return 1 if output >= 0 else 0
+    return "phrase" if output >= 0 else "passage"

@@ -3,8 +3,12 @@ import re
 from collections.abc import Generator
 
 import torch
+from src.data import get_sentences
 from tqdm import tqdm
 from transformers import AutoTokenizer, pipeline
+
+from pygaggle.rerank.base import Query, Text
+from pygaggle.rerank.transformer import MonoBERT, Reranker
 
 
 class QaModel:
@@ -49,6 +53,25 @@ class QaModel:
         return answer
 
 
+def best_query(record: dict, reranker: Reranker) -> dict:
+    """
+    Find the best query for a record.
+
+    :param record: record
+    :param reranker: reranker (MonoBERT or MonoT5)
+    :return: dict with uuid and spoiler
+    """
+    passages = record["sentences"]
+    passages = zip(range(len(passages)), passages)
+    documents = [Text(i[1], {"docid": i[0]}, 0) for i in passages]
+    ret = sorted(
+        reranker.rerank(Query(record["question"]), documents),
+        key=lambda i: i.score,
+        reverse=True,
+    )[0]
+    return ret.text
+
+
 def get_phrase(row: dict, model_phrase: QaModel) -> list:
     """
     Get results for multi phrase
@@ -62,32 +85,18 @@ def get_phrase(row: dict, model_phrase: QaModel) -> list:
     return [model_phrase.predict(question, context)["answer"]]
 
 
-def get_passage(row: dict, model_passage: QaModel) -> list:
+def get_passage(row: dict, model_passage: Reranker) -> list:
     """
     Get results for passage spoiler
 
     :param row: row
     :param model_passage: model for passage spoiler generation
     """
-    question = row.get("postText")[0]
-    context = " ".join(row.get("targetParagraphs"))
+    item = dict(row)
+    item["question"] = row.get("postText")[0]
+    item["sentences"] = get_sentences(row.get("targetParagraphs"))
 
-    answer = model_passage.predict(question, context)["answer"]
-
-    candidates = []
-    for sentence in context.split("."):
-        if answer in sentence:
-            candidates.append(sentence.strip())
-
-    if not candidates:
-        # print("No candidates found")
-        return [""]
-    elif len(candidates) == 1:
-        return [candidates[0]]
-    elif len(candidates) > 1:
-        # print("Multiple candidates found")
-        return [candidates[0]]
-    return [""]
+    return [best_query(item, model_passage)]
 
 
 def get_multi(row: dict, model_multi: QaModel) -> list:
@@ -115,7 +124,11 @@ def get_multi(row: dict, model_multi: QaModel) -> list:
 
 
 def predict(
-    inputs: list, model_phrase: QaModel, model_passage: QaModel, model_multi: QaModel
+    inputs: list,
+    model_phrase: QaModel,
+    model_passage: Reranker,
+    model_multi: QaModel,
+    use_pr: bool = False,
 ) -> Generator:
     """
     Run prediction for model
@@ -124,19 +137,18 @@ def predict(
     :param model_phrase: model for phrase generation
     :param model_passage: model for passage generation
     :param model_multi: model for multi generation
+    :param use_pr: whether to use passage retrieval
     """
     for row in tqdm(inputs):
         if row.get("tags") == ["phrase"]:
             answer = get_phrase(row, model_phrase)
 
-        elif row.get("tags") == ["passage"]:
+        elif row.get("tags") == ["passage"] and use_pr:
             answer = get_passage(row, model_passage)
 
-        elif row.get("tags") == ["multi"]:
-            answer = get_multi(row, model_multi)
+        # NOTE: multi-passage won't be used while using classifier
         else:
-            # print("Tag not found")
-            raise NotImplemented
+            answer = get_multi(row, model_multi)
 
         yield {"uuid": row["uuid"], "spoiler": answer}
 
@@ -145,7 +157,8 @@ def run_inference(
     input_file: str,
     output_file: str,
     model_qa: str = "deepset/roberta-base-squad2",
-    model_pr: str = "",
+    model_pr: Reranker = None,
+    use_pr: bool = False,
 ) -> None:
     """
     Run spoiler generation
@@ -155,11 +168,14 @@ def run_inference(
     :param model_qa: question answering model path
     :param model_pr: passage retrieval model path
     """
+    if model_pr is None:
+        model_pr = MonoBERT()
+
     model = QaModel(model_qa)
-    # TODO add passage retrieval model here
     model_multi = QaModel(model_qa, 5)
+
     with open(input_file, "r") as inp, open(output_file, "w") as out:
         inp_list = [json.loads(i) for i in inp]
 
-        for output in predict(inp_list, model, model, model_multi):
+        for output in predict(inp_list, model, model_pr, model_multi, use_pr):
             out.write(json.dumps(output) + "\n")
