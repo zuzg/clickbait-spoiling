@@ -1,6 +1,18 @@
 import json
-import pandas as pd
 
+import pandas as pd
+from nltk import sent_tokenize
+
+
+def get_sentences(paragraphs) -> list:
+    """
+    Get sentences from paragraphs.
+    """
+    sentences = list()
+    for paragraph in paragraphs:
+        for sentence in sent_tokenize(paragraph):
+            sentences += [sentence]
+    return sentences
 
 def read_data(filename: str) -> pd.DataFrame:
     """
@@ -15,10 +27,13 @@ def read_data(filename: str) -> pd.DataFrame:
             {
                 "uuid": i["uuid"],
                 "title": i["targetTitle"],
-                "question": " ".join(i["postText"]),
-                "context": i["targetParagraphs"],
-                "context_classification": " ".join(i["postText"]) + " " + (" ".join(i["targetParagraphs"])),
-                "spoiler": i["spoiler"],
+                "question": " ".join(i["postText"]),  # query
+                "context": i["targetParagraphs"],  # paragrahps
+                "sentences": get_sentences(i["targetParagraphs"]),
+                "context_classification": " ".join(i["postText"])
+                + " "
+                + (" ".join(i["targetParagraphs"])),
+                "spoiler": " ".join(i["spoiler"]),
                 "positions": i["spoilerPositions"],
                 "tags": 1 if i["tags"][0].lower() == "phrase" else 0,
             }
@@ -59,7 +74,9 @@ def read_data_classification(filename: str) -> pd.DataFrame:
     df = pd.DataFrame(
         [
             {
-                "context": " ".join(i["postText"]) + " " + (" ".join(i["targetParagraphs"])),
+                "context": " ".join(i["postText"])
+                + " "
+                + (" ".join(i["targetParagraphs"])),
                 "tags": 1 if i["tags"][0].lower() == "phrase" else 0,
             }
             for i in data_json
@@ -76,7 +93,7 @@ def save_df_to_jsonl(df: pd.DataFrame, filepath: str) -> None:
     :param filepath: where to save jsonl file
     :return: None
     """
-    spoilers = df[["uuid","spoiler"]]
-    json_output = spoilers.to_json(orient='records', lines=True)
-    with open(filepath, 'w') as f:
+    spoilers = df[["uuid", "spoiler"]]
+    json_output = spoilers.to_json(orient="records", lines=True)
+    with open(filepath, "w") as f:
         f.write(json_output)
