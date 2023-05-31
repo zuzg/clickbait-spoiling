@@ -4,6 +4,7 @@ import torch.nn as nn
 import transformers
 from torch.utils.data import Dataset
 from tqdm import tqdm
+import torch.optim as optim
 
 
 class BertDataset(Dataset):
@@ -86,7 +87,7 @@ class BERTClassifier(nn.Module):
         return out
 
 
-def finetune_BERT(epochs, dataloader, model, loss_fn, optimizer):
+def finetune_BERT(epochs, dataloader, model, loss_fn = nn.BCEWithLogitsLoss(), optimizer = None):
     """
     Finetune BERT model for Clickbait Spoiler Classification
     :param epochs: Number of epochs to train
@@ -96,6 +97,9 @@ def finetune_BERT(epochs, dataloader, model, loss_fn, optimizer):
     :param optimizer: Optimizer
     :return: Finetuned BERT model
     """
+    if optimizer is None:
+        optimizer = optim.Adam(model.parameters(), lr=0.0001)
+
     # freeze BERT parameters
     for param in model.bert_model.parameters():
         param.requires_grad = False

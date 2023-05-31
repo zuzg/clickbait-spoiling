@@ -1,16 +1,17 @@
 import json
 import re
-import torch
-from transformers import AutoTokenizer
-from transformers import pipeline
-from tqdm import tqdm
 from collections.abc import Generator
+
+import torch
+from tqdm import tqdm
+from transformers import AutoTokenizer, pipeline
 
 
 class QaModel:
     """
     Class for QA model
     """
+
     def __init__(self, model_name: str, num_answers: int = 1):
         """
         :param model_name: path to the model
@@ -115,7 +116,7 @@ def get_multi(row: dict, model_multi: QaModel) -> list:
 
 def predict(
     inputs: list, model_phrase: QaModel, model_passage: QaModel, model_multi: QaModel
-) -> Generator[dict, None, None]:
+) -> Generator:
     """
     Run prediction for model
 

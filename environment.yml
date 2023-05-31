@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.10
+  - python=3.8
   - flake8
   - mypy
   - pytest
@@ -19,3 +19,4 @@ dependencies:
   - nltk
   - bert_score
   - pandas-stubs
+  - pygaggle
