@@ -3,12 +3,13 @@ import re
 from collections.abc import Generator
 
 import torch
-from src.data import get_sentences
+from pygaggle.rerank.base import Query, Text
+from pygaggle.rerank.transformer import MonoBERT, Reranker
 from tqdm import tqdm
 from transformers import AutoTokenizer, pipeline
 
-from pygaggle.rerank.base import Query, Text
-from pygaggle.rerank.transformer import MonoBERT, Reranker
+from src.bert_classifier import predict_spoiler_class_from_text
+from src.data import create_user_data, get_sentences, get_target_paragraphs
 
 
 class QaModel:
@@ -151,10 +152,6 @@ def predict(
         else:
             answer = get_multi(row, model_multi)
 
-        if user:
-            return answer
-
-        print("Answer: ", answer)
         yield {"uuid": row["uuid"], "spoiler": answer}
 
 
@@ -188,10 +185,10 @@ def run_inference(
 
 def user_inference(
     data: dict,
-    model_qa: str = "deepset/roberta-base-squad2",
+    model_qa: str,
     model_pr: Reranker = None,
-    use_pr: bool = False,
-) -> None:
+    use_pr: bool = True,
+) -> dict:
     """
     Run spoiler generation
 
@@ -199,6 +196,8 @@ def user_inference(
     :param model_qa: question answering model path
     :param model_pr: passage retrieval model path
     """
+    if model_qa is None:
+        model_qa = "deepset/roberta-base-squad2"
     if model_pr is None:
         model_pr = MonoBERT()
 
@@ -207,5 +206,48 @@ def user_inference(
 
     data["uuid"] = "user_input"
     output = predict([data], model, model_pr, model_multi, use_pr, user=True)
-    print(output)
-    return output
+    output_list = list(output)
+    return output_list[0]
+
+
+def get_spoiler_from_user_input(
+    postText: str,
+    targetUrl: str,
+    model_classification: str,
+    model_qa: str = None,
+    model_pr: Reranker = None,
+    verbose: bool = True,
+):
+    """
+    Run spoiler generation from the data provided by the user
+
+    :param postText: post text
+    :param targetUrl: target url
+    :param model_classification: classification model path
+    :param model_qa: question answering model path
+    :param model_pr: passage retrieval model - reranker
+    :param verbose: whether to print intermediate results
+    :return: spoiler
+    """
+    target_paragraphs = get_target_paragraphs(targetUrl)
+
+    if verbose:
+        print("Target paragraphs (input for spoiler classification):")
+        print(target_paragraphs)
+
+    text_classification = postText + " " + (" ".join(target_paragraphs))
+    prediction = predict_spoiler_class_from_text(
+        text_classification, model_classification
+    )
+    if verbose:
+        print(f"Spoiler type prediction : {prediction}")
+
+    data = create_user_data(postText, target_paragraphs, prediction)
+    if verbose:
+        print("\nInput:")
+        print(data)
+    spoiler = user_inference(data, model_qa, model_pr)
+    if verbose:
+        print("Output:")
+        print(spoiler)
+    return spoiler

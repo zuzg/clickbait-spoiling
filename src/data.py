@@ -134,7 +134,11 @@ def get_target_paragraphs(link):
             soup = BeautifulSoup(response.content, "html.parser")
             paragraphs = soup.find_all("p")
 
-            target_paragraphs = [clean_text(p.get_text()) for p in paragraphs]
+            target_paragraphs = []
+            for p in paragraphs:
+                cleaned_text = clean_text(p.get_text())
+                if len(cleaned_text) > 0:
+                    target_paragraphs.append(cleaned_text)
             return target_paragraphs
         elif response.status_code == 429:
             # rate limit exceeded, wait for a few seconds...
@@ -158,5 +162,5 @@ def create_user_data(postText: str, target_paragraphs: str, prediction: str) -> 
     data = dict()
     data["postText"] = postText
     data["targetParagraphs"] = target_paragraphs
-    data["tags"] = prediction
+    data["tags"] = [prediction]
     return data
