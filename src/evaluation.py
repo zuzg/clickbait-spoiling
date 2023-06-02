@@ -4,6 +4,7 @@ from glob import glob
 from os.path import isdir
 import string
 import json
+import numpy as np
 from nltk.translate.bleu_score import sentence_bleu
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
@@ -290,4 +291,31 @@ def plot_scores(scores: dict) -> None:
         for key, val in scores.items():
             if p in key:
                 axs[i].bar(key, val)
+    fig.show()
+
+
+def plot_comparison_scores(scores1: dict, scores2: dict) -> None:
+    """
+    Plot scores of different approaches
+
+    :param scores1: dict with scores of 1st approach
+    :param scores2: dict with scores of 2nd approach
+    :return: none
+    """
+    plots = ["bleu", "bert"]
+    labels = ["all-spoilers", "phrase-spoilers", "passage-spoilers" , "multi-spoilers"]
+    fig, axs = plt.subplots(1, 2, figsize=(8,5))
+    x = np.arange(4)
+    for i, p in enumerate(plots):
+        y1 = []
+        y2 = []
+        axs[i].set_title(p)
+        for (key, val1), val2 in zip(scores1.items(), scores2.values()):
+            if p in key:
+                y1.append(val1)
+                y2.append(val2)
+        axs[i].bar(x, y1, width=0.25)
+        axs[i].bar(x+0.25, y2, width=0.25)
+        axs[i].set_xticks(x+0.25, labels, rotation=45)
+        axs[i].legend(["Base", "Ours"])
     fig.show()
