@@ -95,7 +95,7 @@ def get_tokenized_dataset(df: pd.DataFrame) -> Dataset:
     :param df: dataframe to tokenize
     :return: tokenized dataset
     """
-    df["flat_context"] = ["".join(p) for p in df["context"]]
+    df["flat_context"] = ["".join(str(p)) for p in df["context"]]
     dataset = Dataset.from_pandas(df)
     return dataset.map(tokenize_function, batched=True)
 
@@ -113,7 +113,7 @@ def prepare_training(train_dataset: Dataset, eval_dataset: Dataset) -> Trainer:
     training_args = TrainingArguments(
         output_dir="./data/roberta-finetuned",
         evaluation_strategy="epoch",
-        num_train_epochs=5,
+        num_train_epochs=20,
         fp16=True,
     )
 
