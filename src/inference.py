@@ -1,8 +1,8 @@
 import json
 import re
-from collections.abc import Generator
 
 import torch
+import logging
 from pygaggle.rerank.base import Query, Text
 from pygaggle.rerank.transformer import MonoBERT, Reranker
 from tqdm import tqdm
@@ -118,8 +118,8 @@ def get_multi(row: dict, model_multi: QaModel) -> list:
             current_result = candidates["answer"]
             results.append(current_result)
             current_context = re.sub(current_result, "", current_context)
-    except:
-        # print("Error generating multipart spoiler")
+    except ValueError as e:
+        logging.error(e)
         results = ["Error"]
     return results
 

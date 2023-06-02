@@ -1,16 +1,17 @@
-from os.path import exists
+import json
+import logger
+import string
 from copy import deepcopy
 from glob import glob
-from os.path import isdir
-import string
-import json
-import numpy as np
-from nltk.translate.bleu_score import sentence_bleu
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-from bert_score import score
-import matplotlib.pyplot as plt
+from os.path import exists, isdir
 from typing import Any
+
+import matplotlib.pyplot as plt
+import numpy as np
+from bert_score import score
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.translate.bleu_score import sentence_bleu
 
 
 def error(msg: str) -> None:
@@ -55,17 +56,18 @@ def load_json_lines(f: str) -> list:
         f = fd[0]
 
     with open(f, "r") as inp:
-        for l in inp:
+        for i in inp:
             try:
-                ret += [json.loads(l)]
-            except:
+                ret += [json.loads(i)]
+            except ValueError as e:
+                logger.error(e)
                 error(
                     "Invalid line "
                     + str(num)
                     + ' in "'
                     + f
                     + '" with content: '
-                    + l.strip()
+                    + i.strip()
                 )
             num += 1
 
@@ -75,7 +77,7 @@ def load_json_lines(f: str) -> list:
 
 def normalize_spoiler_generation(i: dict, expected_spoiler_type: str = "") -> Any:
     """
-    Normalize spoiler generations 
+    Normalize spoiler generations
     :param i: spoiler generations
     :param expected_spoiler_type: type of spoiler
     :return: normalized spoilers
@@ -93,18 +95,20 @@ def normalize_spoiler_generation(i: dict, expected_spoiler_type: str = "") -> An
     return {i["uuid"]: i["spoiler"]}
 
 
-def spoiler_generations_to_map(l: list, expected_spoiler_type: Any = None) -> dict:
+def spoiler_generations_to_map(
+    predictions: list, expected_spoiler_type: Any = None
+) -> dict:
     """
-    Transform spoiler generations 
+    Transform spoiler generations
     :param l: spoiler generations
     :param expected_spoiler_type: type of spoiler
     :return: map of spoilers
     """
-    if l is None or len(l) == 0:
+    if predictions is None or len(predictions) == 0:
         error("Spoiler predictions are empty.")
     uuids = []
 
-    for i in deepcopy(l):
+    for i in deepcopy(predictions):
         i = normalize_spoiler_generation(i, expected_spoiler_type)
         if not i:
             return {}
@@ -112,16 +116,16 @@ def spoiler_generations_to_map(l: list, expected_spoiler_type: Any = None) -> di
             continue
         uuids += list(i.keys())
 
-    if not expected_spoiler_type and len(l) != len(set(uuids)):
+    if not expected_spoiler_type and len(predictions) != len(set(uuids)):
         error(
             "Spoiler generations have dupliates. I found "
-            + str(len(l))
+            + str(len(predictions))
             + " entries but only "
             + str(len(set(uuids)))
             + " unique uuids."
         )
 
-    ln = [normalize_spoiler_generation(i, expected_spoiler_type) for i in l]
+    ln = [normalize_spoiler_generation(i, expected_spoiler_type) for i in predictions]
     ln = [i for i in ln if i and i is not True]
 
     success("Spoiler generations have correct format. Found " + str(len(ln)))
@@ -142,6 +146,7 @@ def bleu_score(truth: list, prediction: list) -> float:
     :param prediction: predicted spoilers
     :return: calculated score
     """
+
     def stopfilter(tokens):
         tmp = [token for token in tokens if token not in stopwords.words("english")]
         res = [token.lower() for token in tmp if token not in string.punctuation]
@@ -164,6 +169,7 @@ def bleu_score(truth: list, prediction: list) -> float:
             print("\n")
 
         return sentence_bleu([trut], predi, weights=weights)
+
     lem_score = 0.0
 
     for i in range(len(truth)):
@@ -235,7 +241,9 @@ def create_protobuf_for_task_2(actual: dict, expected: dict) -> dict:
     }
 
 
-def eval_task_2(input_run: str, ground_truth_spoilers: str, output_file: str = "") -> dict:
+def eval_task_2(
+    input_run: str, ground_truth_spoilers: str, output_file: str = ""
+) -> dict:
     """
     Run evaluation on spoiler detection
 
@@ -248,7 +256,7 @@ def eval_task_2(input_run: str, ground_truth_spoilers: str, output_file: str = "
     gt_spoilers_dict = load_json_lines(ground_truth_spoilers)
     input_run_dict = spoiler_generations_to_map(input_run_list)
     result_dict = dict()
-    if gt_spoilers_dict == None:
+    if gt_spoilers_dict is None:
         result_dict["result-size"] = len(input_run_dict.keys())
         success(
             "No ground-truth is passed. I tested the input run and the input run is valid."
@@ -262,7 +270,8 @@ def eval_task_2(input_run: str, ground_truth_spoilers: str, output_file: str = "
         ]:
             print("Run evaluation for " + display_name)
             filtered_ground_truth_spoilers = spoiler_generations_to_map(
-                deepcopy(gt_spoilers_dict), tag_name)
+                deepcopy(gt_spoilers_dict), tag_name
+            )
 
             for k, v in create_protobuf_for_task_2(
                 input_run_dict, filtered_ground_truth_spoilers
@@ -283,8 +292,8 @@ def plot_scores(scores: dict) -> None:
     :return: none
     """
     plots = ["bleu", "bert", "size"]
-    labels = ["all-spoilers", "phrase-spoilers", "passage-spoilers" , "multi-spoilers"]
-    fig, axs = plt.subplots(1, 3, figsize=(12,5))
+    labels = ["all-spoilers", "phrase-spoilers", "passage-spoilers", "multi-spoilers"]
+    fig, axs = plt.subplots(1, 3, figsize=(12, 5))
     for i, p in enumerate(plots):
         axs[i].set_title(p)
         axs[i].set_xticklabels(labels, rotation=45)
@@ -303,8 +312,8 @@ def plot_comparison_scores(scores1: dict, scores2: dict) -> None:
     :return: none
     """
     plots = ["bleu", "bert"]
-    labels = ["all-spoilers", "phrase-spoilers", "passage-spoilers" , "multi-spoilers"]
-    fig, axs = plt.subplots(1, 2, figsize=(8,5))
+    labels = ["all-spoilers", "phrase-spoilers", "passage-spoilers", "multi-spoilers"]
+    fig, axs = plt.subplots(1, 2, figsize=(8, 5))
     x = np.arange(4)
     for i, p in enumerate(plots):
         y1 = []
@@ -315,7 +324,7 @@ def plot_comparison_scores(scores1: dict, scores2: dict) -> None:
                 y1.append(val1)
                 y2.append(val2)
         axs[i].bar(x, y1, width=0.25)
-        axs[i].bar(x+0.25, y2, width=0.25)
-        axs[i].set_xticks(x+0.25, labels, rotation=45)
+        axs[i].bar(x + 0.25, y2, width=0.25)
+        axs[i].set_xticks(x + 0.25, labels, rotation=45)
         axs[i].legend(["Base", "Ours"])
     fig.show()
