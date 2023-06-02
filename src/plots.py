@@ -23,7 +23,7 @@ def get_spoiler_positions_plot(
         spoiler_parts = []
         for index, row in df.iterrows():
             for positions in row["positions"]:
-                pos = positions[0][0]
+                pos = positions[0][0] + 1
                 if pos == -1:
                     pos = len(row["context"])
                 spoiler_parts.append(pos / len(row["context"]))
