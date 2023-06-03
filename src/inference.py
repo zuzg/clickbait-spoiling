@@ -10,7 +10,12 @@ from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers.pipelines import pipeline
 
 from src.bert_classifier import BERTClassifier, predict_spoiler_class_from_text
-from src.data import create_user_data, get_sentences, get_target_paragraphs
+from src.data import (
+    create_user_data,
+    get_sentences,
+    get_target_paragraphs,
+    UserData
+)
 
 
 class QaModel:
@@ -81,8 +86,12 @@ def get_phrase(row: dict, model_phrase: QaModel) -> list:
     :param row: row
     :param model_phrase: model for phrase spoiler generation
     """
-    question = row.get("postText")[0]
-    context = " ".join(row.get("targetParagraphs"))
+    post_text = row.get("postText")
+    target_p = row.get("targetParagraphs")
+    if post_text:
+        question = post_text[0]
+    if target_p:
+        context = " ".join(target_p)
 
     return [model_phrase.predict(question, context)["answer"]]  # type: ignore
 
@@ -95,8 +104,12 @@ def get_passage(row: dict, model_passage: Reranker) -> list:
     :param model_passage: model for passage spoiler generation
     """
     item = dict(row)
-    item["question"] = row.get("postText")[0]
-    item["sentences"] = get_sentences(row.get("targetParagraphs"))
+    post_text = row.get("postText")
+    target_p = row.get("targetParagraphs")
+    if post_text:
+        item["question"] = post_text[0]
+    if target_p:
+        item["sentences"] = get_sentences(target_p)
 
     return [best_query(item, model_passage)]
 
@@ -108,8 +121,12 @@ def get_multi(row: dict, model_multi: QaModel) -> list:
     :param row: row
     :param model_multi: model for multi spoiler generation
     """
-    question = row.get("postText")[0]
-    context = " ".join(row.get("targetParagraphs"))
+    post_text = row.get("postText")
+    target_p = row.get("targetParagraphs")
+    if post_text:
+        question = post_text[0]
+    if target_p:
+        context = " ".join(target_p)
 
     current_context = context
     results = []
@@ -183,7 +200,7 @@ def run_inference(
 
 
 def user_inference(
-    data: dict,
+    data: UserData,
     model_qa: str = "deepset/roberta-base-squad2",
     model_pr: Reranker = MonoBERT(),
     use_pr: bool = True,

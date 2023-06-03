@@ -1,7 +1,7 @@
 import json
 import re
 import time
-from typing import List
+from typing import List, TypedDict
 
 import pandas as pd
 import requests
@@ -151,10 +151,16 @@ def get_target_paragraphs(link: str) -> List[str]:
     return []
 
 
+class UserData(TypedDict):
+    uuid: str
+    postText: str
+    targetParagraphs: List[str]
+    tags: List[str]
+
+
 def create_user_data(
-        postText: str,
-        target_paragraphs: List[str],
-        prediction: str) -> dict:
+    postText: str, target_paragraphs: List[str], prediction: str
+) -> UserData:
     """
     Create user data from provided postText, target_paragraphs and prediction.
 
@@ -163,8 +169,10 @@ def create_user_data(
     :param prediction: prediction from the model
     :return: dictionary with postText, target_paragraphs and prediction
     """
-    data = dict()
-    data["postText"] = postText
-    data["targetParagraphs"] = target_paragraphs
-    data["tags"] = [prediction]
+    data = UserData(
+        uuid="",
+        postText=postText,
+        targetParagraphs=target_paragraphs,
+        tags=[prediction],
+    )
     return data

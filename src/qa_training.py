@@ -1,6 +1,8 @@
 import pandas as pd
 from datasets import Dataset
-from transformers.models.auto.modeling_auto import AutoModelForQuestionAnswering
+from transformers.models.auto.modeling_auto import (
+    AutoModelForQuestionAnswering
+)
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 from transformers.trainer import Trainer
 from transformers.trainer_utils import IntervalStrategy
