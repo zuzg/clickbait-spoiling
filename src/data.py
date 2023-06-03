@@ -1,13 +1,12 @@
 import json
 import re
 import time
+from typing import List
 
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from nltk import sent_tokenize
-from typing import List
-from src.inference import Row
 
 
 def get_sentences(paragraphs: List[str]) -> List[str]:
@@ -152,7 +151,9 @@ def get_target_paragraphs(link: str) -> List[str]:
     return []
 
 
-def create_user_data(postText: str, target_paragraphs: List[str], prediction: str) -> Row:
+def create_user_data(
+    postText: str, target_paragraphs: List[str], prediction: str
+) -> dict:
     """
     Create user data from provided postText, target_paragraphs and prediction.
 
@@ -161,7 +162,7 @@ def create_user_data(postText: str, target_paragraphs: List[str], prediction: st
     :param prediction: prediction from the model
     :return: dictionary with postText, target_paragraphs and prediction
     """
-    data = Row()
+    data = dict()
     data["postText"] = postText
     data["targetParagraphs"] = target_paragraphs
     data["tags"] = [prediction]

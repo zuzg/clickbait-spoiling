@@ -1,10 +1,8 @@
 import json
 import logging
 import re
-from typing import List
 
 import torch
-from mypy_extensions import TypedDict
 from pygaggle.rerank.base import Query, Text
 from pygaggle.rerank.transformer import MonoBERT, Reranker
 from tqdm import tqdm
@@ -13,12 +11,6 @@ from transformers.pipelines import pipeline
 
 from src.bert_classifier import BERTClassifier, predict_spoiler_class_from_text
 from src.data import create_user_data, get_sentences, get_target_paragraphs
-
-
-class Row(TypedDict):  # type: ignore
-    postText: List[str]
-    targetParagraphs: List[str]
-    tags: List[str]
 
 
 class QaModel:
@@ -82,7 +74,7 @@ def best_query(record: dict, reranker: Reranker) -> dict:
     return ret.text
 
 
-def get_phrase(row: Row, model_phrase: QaModel) -> list:
+def get_phrase(row: dict, model_phrase: QaModel) -> list:
     """
     Get results for multi phrase
 
@@ -95,7 +87,7 @@ def get_phrase(row: Row, model_phrase: QaModel) -> list:
     return [model_phrase.predict(question, context)["answer"]]  # type: ignore
 
 
-def get_passage(row: Row, model_passage: Reranker) -> list:
+def get_passage(row: dict, model_passage: Reranker) -> list:
     """
     Get results for passage spoiler
 
@@ -109,7 +101,7 @@ def get_passage(row: Row, model_passage: Reranker) -> list:
     return [best_query(item, model_passage)]
 
 
-def get_multi(row: Row, model_multi: QaModel) -> list:
+def get_multi(row: dict, model_multi: QaModel) -> list:
     """
     Get results for multi spoiler
 
