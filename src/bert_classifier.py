@@ -31,7 +31,8 @@ class BertDataset(Dataset):
         """
         :param text: Input text
         :param index: Index of the text in the dataset
-        :return: Dictionary of input_ids, attention_mask, token_type_ids and target
+        :return: Dictionary of input_ids, attention_mask,
+        token_type_ids and target
         """
         inputs = self.tokenizer.encode_plus(
             text,
@@ -65,7 +66,8 @@ class BERTClassifier(nn.Module):
 
     def __init__(self, model_checkpoint):
         super(BERTClassifier, self).__init__()
-        self.bert_model = transformers.BertModel.from_pretrained(model_checkpoint)
+        self.bert_model = transformers.BertModel.from_pretrained(
+            model_checkpoint)
         self.dropout1 = nn.Dropout(0.1)  # regularization
         self.fc1 = nn.Linear(768, 512)  # fully connected layer
         self.dropout2 = nn.Dropout(0.1)  # regularization
@@ -74,9 +76,9 @@ class BERTClassifier(nn.Module):
         self.fc3 = nn.Linear(256, 1)  # output
 
     def forward(self, ids, mask, token_type_ids):
-        _, x = self.bert_model(
-            ids, attention_mask=mask, token_type_ids=token_type_ids, return_dict=False
-        )
+        _, x = self.bert_model(ids, attention_mask=mask,
+                               token_type_ids=token_type_ids,
+                               return_dict=False)
         x = self.dropout1(x)
         x = self.fc1(x)
         x = self.relu(x)
@@ -176,8 +178,9 @@ def prepare_input_bert_classifier(input_text, tokenizer, max_length=512):
 
 
 def predict_spoiler_class_from_text(
-    text: str, model: BERTClassifier, model_checkpoint: str = "bert-base-uncased"
-):
+        text: str,
+        model: BERTClassifier,
+        model_checkpoint: str = "bert-base-uncased"):
     """
     Predict spoiler class from text
 

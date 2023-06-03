@@ -150,7 +150,10 @@ def get_target_paragraphs(link):
     return []
 
 
-def create_user_data(postText: str, target_paragraphs: str, prediction: str) -> dict:
+def create_user_data(
+        postText: str,
+        target_paragraphs: str,
+        prediction: str) -> dict:
     """
     Create user data from provided postText, target_paragraphs and prediction.
 

@@ -55,7 +55,8 @@ def tokenize_function(dataset: Dataset) -> dict:
     start_positions = []
     end_positions = []
 
-    for i, (context, answer, pos, offset) in enumerate(zip(contexts, answers, positions, offset_mapping)):
+    for i, (context, answer, pos, offset) in enumerate(
+            zip(contexts, answers, positions, offset_mapping)):
         start_char, end_char = flat_position(context, pos, answer[0])
         sequence_ids = inputs.sequence_ids(i)
 
@@ -69,7 +70,8 @@ def tokenize_function(dataset: Dataset) -> dict:
         context_end = idx - 1
 
         # If the answer is not fully inside the context, label it (0, 0)
-        if offset[context_start][0] > end_char or offset[context_end][1] < start_char:
+        if (offset[context_start][0] > end_char or
+                offset[context_end][1] < start_char):
             start_positions.append(0)
             end_positions.append(0)
         else:
@@ -148,8 +150,9 @@ def finetune_roberta(train_file: str, eval_file: str) -> None:
     eval_df = get_only_phrases(read_data(eval_file))
     train_dataset = get_tokenized_dataset(train_df)
     validation_dataset = get_tokenized_dataset(eval_df)
-    # small_train_dataset = train_dataset.shuffle(seed=42).select(range(1000))
-    # small_eval_dataset = validation_dataset.shuffle(seed=42).select(range(200))
-    trainer = prepare_training(train_dataset.shuffle(seed=42), validation_dataset.shuffle(seed=42))
+    # small_train_dataset = train_dataset.select(range(1000))
+    # small_eval_dataset = validation_dataset.select(range(200))
+    trainer = prepare_training(train_dataset.shuffle(
+        seed=42), validation_dataset.shuffle(seed=42))
     trainer.train()
     trainer.save_model("./data/roberta-finetuned")
