@@ -95,7 +95,7 @@ def get_tokenized_dataset(df: pd.DataFrame) -> Dataset:
     :param df: dataframe to tokenize
     :return: tokenized dataset
     """
-    df["flat_context"] = ["".join(str(p)) for p in df["context"]]
+    df["flat_context"] = ["".join(p) for p in df["context"]]
     dataset = Dataset.from_pandas(df)
     return dataset.map(tokenize_function, batched=True)
 
@@ -127,6 +127,16 @@ def prepare_training(train_dataset: Dataset, eval_dataset: Dataset) -> Trainer:
     return trainer
 
 
+def get_only_phrases(dataset: pd.DataFrame) -> pd.DataFrame:
+    """
+    Filter dataframe to consist only phrases type of spoiler
+
+    :param dataset: dataset to filter
+    :return: filtered dataset
+    """
+    return dataset.loc[dataset.tags == 1]
+
+
 def finetune_roberta(train_file: str, eval_file: str) -> None:
     """
     Perform RoBERTa finetuning on custom data
@@ -134,12 +144,12 @@ def finetune_roberta(train_file: str, eval_file: str) -> None:
     :param train_file: path to train dataset
     :param eval_file: path to eval dataset
     """
-    train_df = read_data(train_file)
-    eval_df = read_data(eval_file)
+    train_df = get_only_phrases(read_data(train_file))
+    eval_df = get_only_phrases(read_data(eval_file))
     train_dataset = get_tokenized_dataset(train_df)
     validation_dataset = get_tokenized_dataset(eval_df)
-    small_train_dataset = train_dataset.shuffle(seed=42).select(range(1000))
-    small_eval_dataset = validation_dataset.shuffle(seed=42).select(range(200))
-    trainer = prepare_training(small_train_dataset, small_eval_dataset)
+    # small_train_dataset = train_dataset.shuffle(seed=42).select(range(1000))
+    # small_eval_dataset = validation_dataset.shuffle(seed=42).select(range(200))
+    trainer = prepare_training(train_dataset.shuffle(seed=42), validation_dataset.shuffle(seed=42))
     trainer.train()
     trainer.save_model("./data/roberta-finetuned")
