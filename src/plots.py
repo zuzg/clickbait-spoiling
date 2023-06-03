@@ -6,7 +6,7 @@ import seaborn as sns
 
 
 def get_spoiler_positions_plot(
-    dfs: List[pd.DataFrame], color: str, suffix: List[str] = None
+    dfs: List[pd.DataFrame], color: str, suffix: List[str]
 ) -> None:
     """
     Plot spoiler positions in the context

@@ -1,11 +1,11 @@
 import json
-import logger
 import string
 from copy import deepcopy
 from glob import glob
 from os.path import exists, isdir
-from typing import Any
+from typing import Any, List
 
+import logger
 import matplotlib.pyplot as plt
 import numpy as np
 from bert_score import score
@@ -184,12 +184,12 @@ def bleu_score(truth: list, prediction: list) -> float:
         lem_truth_tokens = stopfilter(word_tokenize(real_answer.replace("\n", "")))
         lem_prediction_tokens = stopfilter(word_tokenize(pred_answer.replace("\n", "")))
         i_lem_score = make_score(lem_truth_tokens, lem_prediction_tokens)
-        lem_score += i_lem_score
+        lem_score += i_lem_score  # type: ignore
 
     return lem_score / len(truth)
 
 
-def bert_score(truth: list, prediction: list) -> float:
+def bert_score(truth: List[str], prediction: List[str]) -> float:
     """
     Calcualte BERT score
 
@@ -200,7 +200,8 @@ def bert_score(truth: list, prediction: list) -> float:
     assert len(truth) == len(prediction)
     prec, rec, f1 = score(prediction, truth, lang="en")
 
-    return float(f1.mean())
+    f1_array = np.array(f1)
+    return float(np.mean(f1_array))
 
 
 def create_protobuf_for_task_2(actual: dict, expected: dict) -> dict:

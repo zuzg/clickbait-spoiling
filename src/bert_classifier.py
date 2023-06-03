@@ -2,9 +2,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import transformers
-from torch.utils.data import Dataset
+from torch import Tensor, cuda
+from torch.utils.data.dataset import Dataset
 from tqdm import tqdm
+from transformers.models.bert.modeling_bert import BertModel
+from transformers.models.bert.tokenization_bert import BertTokenizer
 
 
 class BertDataset(Dataset):
@@ -65,7 +67,7 @@ class BERTClassifier(nn.Module):
 
     def __init__(self, model_checkpoint):
         super(BERTClassifier, self).__init__()
-        self.bert_model = transformers.BertModel.from_pretrained(model_checkpoint)
+        self.bert_model = BertModel.from_pretrained(model_checkpoint)
         self.dropout1 = nn.Dropout(0.1)  # regularization
         self.fc1 = nn.Linear(768, 512)  # fully connected layer
         self.dropout2 = nn.Dropout(0.1)  # regularization
@@ -73,10 +75,25 @@ class BERTClassifier(nn.Module):
         self.relu = nn.ReLU()  # non-linearity
         self.fc3 = nn.Linear(256, 1)  # output
 
-    def forward(self, ids, mask, token_type_ids):
+    def forward(
+        self,
+        ids: Tensor,
+        mask: Tensor,
+        token_type_ids: Tensor,
+        return_dict: bool = False,
+    ) -> Tensor:
+        """
+        :param ids: Input ids
+        :param mask: Attention mask
+        :param token_type_ids: Token type ids
+        :return: Output logits
+        """
         _, x = self.bert_model(
-            ids, attention_mask=mask, token_type_ids=token_type_ids, return_dict=False
-        )
+            ids,
+            attention_mask=mask,
+            token_type_ids=token_type_ids,
+            return_dict=return_dict,
+        )  # type: ignore
         x = self.dropout1(x)
         x = self.fc1(x)
         x = self.relu(x)
@@ -92,6 +109,7 @@ def finetune_BERT(
 ):
     """
     Finetune BERT model for Clickbait Spoiler Classification
+
     :param epochs: Number of epochs to train
     :param dataloader: DataLoader
     :param model: BERTClassifier
@@ -106,7 +124,7 @@ def finetune_BERT(
     for param in model.bert_model.parameters():
         param.requires_grad = False
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if cuda.is_available() else "cpu")
     model.train()
     model.to(device)
 
@@ -186,7 +204,7 @@ def predict_spoiler_class_from_text(
     :param model_checkpoint: Model checkpoint
     :return: 1 if 'phrase', 0 if 'passage'/'multi'
     """
-    tokenizer = transformers.BertTokenizer.from_pretrained(model_checkpoint)
+    tokenizer = BertTokenizer.from_pretrained(model_checkpoint)
     input = prepare_input_bert_classifier(text, tokenizer)
     output = model(
         input["ids"].unsqueeze(0),

@@ -1,15 +1,24 @@
 import json
+import logging
 import re
+from typing import List
 
 import torch
-import logging
+from mypy_extensions import TypedDict
 from pygaggle.rerank.base import Query, Text
 from pygaggle.rerank.transformer import MonoBERT, Reranker
 from tqdm import tqdm
-from transformers import AutoTokenizer, pipeline
+from transformers.models.auto.tokenization_auto import AutoTokenizer
+from transformers.pipelines import pipeline
 
-from src.bert_classifier import predict_spoiler_class_from_text
+from src.bert_classifier import BERTClassifier, predict_spoiler_class_from_text
 from src.data import create_user_data, get_sentences, get_target_paragraphs
+
+
+class Row(TypedDict):  # type: ignore
+    postText: List[str]
+    targetParagraphs: List[str]
+    tags: List[str]
 
 
 class QaModel:
@@ -50,7 +59,7 @@ class QaModel:
         :param context: context
         :return: spoiler
         """
-        answer = self.model(question=question, context=context)
+        answer = self.model(question=question, context=context)  # type: ignore
         return answer
 
 
@@ -73,7 +82,7 @@ def best_query(record: dict, reranker: Reranker) -> dict:
     return ret.text
 
 
-def get_phrase(row: dict, model_phrase: QaModel) -> list:
+def get_phrase(row: Row, model_phrase: QaModel) -> list:
     """
     Get results for multi phrase
 
@@ -83,10 +92,10 @@ def get_phrase(row: dict, model_phrase: QaModel) -> list:
     question = row.get("postText")[0]
     context = " ".join(row.get("targetParagraphs"))
 
-    return [model_phrase.predict(question, context)["answer"]]
+    return [model_phrase.predict(question, context)["answer"]]  # type: ignore
 
 
-def get_passage(row: dict, model_passage: Reranker) -> list:
+def get_passage(row: Row, model_passage: Reranker) -> list:
     """
     Get results for passage spoiler
 
@@ -100,7 +109,7 @@ def get_passage(row: dict, model_passage: Reranker) -> list:
     return [best_query(item, model_passage)]
 
 
-def get_multi(row: dict, model_multi: QaModel) -> list:
+def get_multi(row: Row, model_multi: QaModel) -> list:
     """
     Get results for multi spoiler
 
@@ -115,7 +124,7 @@ def get_multi(row: dict, model_multi: QaModel) -> list:
     try:
         for _ in range(0, 5):
             candidates = model_multi.predict(question, current_context)[0]
-            current_result = candidates["answer"]
+            current_result = candidates["answer"]  # type: ignore
             results.append(current_result)
             current_context = re.sub(current_result, "", current_context)
     except ValueError as e:
@@ -159,7 +168,7 @@ def run_inference(
     input_file: str,
     output_file: str,
     model_qa: str = "deepset/roberta-base-squad2",
-    model_pr: Reranker = None,
+    model_pr: Reranker = MonoBERT(),
     use_pr: bool = False,
 ) -> None:
     """
@@ -170,8 +179,6 @@ def run_inference(
     :param model_qa: question answering model path
     :param model_pr: passage retrieval model path
     """
-    if model_pr is None:
-        model_pr = MonoBERT()
 
     model = QaModel(model_qa)
     model_multi = QaModel(model_qa, 5)
@@ -185,8 +192,8 @@ def run_inference(
 
 def user_inference(
     data: dict,
-    model_qa: str,
-    model_pr: Reranker = None,
+    model_qa: str = "deepset/roberta-base-squad2",
+    model_pr: Reranker = MonoBERT(),
     use_pr: bool = True,
 ) -> dict:
     """
@@ -196,10 +203,6 @@ def user_inference(
     :param model_qa: question answering model path
     :param model_pr: passage retrieval model path
     """
-    if model_qa is None:
-        model_qa = "deepset/roberta-base-squad2"
-    if model_pr is None:
-        model_pr = MonoBERT()
 
     model = QaModel(model_qa)
     model_multi = QaModel(model_qa, 5)
@@ -213,9 +216,9 @@ def user_inference(
 def get_spoiler_from_user_input(
     postText: str,
     targetUrl: str,
-    model_classification: str,
-    model_qa: str = None,
-    model_pr: Reranker = None,
+    model_classification: BERTClassifier,
+    model_qa: str = None,  # type: ignore
+    model_pr: Reranker = None,  # type: ignore
     verbose: bool = True,
 ):
     """

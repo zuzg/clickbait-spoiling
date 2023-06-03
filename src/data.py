@@ -6,9 +6,11 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from nltk import sent_tokenize
+from typing import List
+from src.inference import Row
 
 
-def get_sentences(paragraphs) -> list:
+def get_sentences(paragraphs: List[str]) -> List[str]:
     """
     Get sentences from paragraphs.
     """
@@ -104,7 +106,7 @@ def save_df_to_jsonl(df: pd.DataFrame, filepath: str) -> None:
         f.write(json_output)
 
 
-def clean_text(text):
+def clean_text(text: str) -> str:
     """
     Clean text from email addresses, urls and extra spaces.
 
@@ -118,7 +120,7 @@ def clean_text(text):
     return text
 
 
-def get_target_paragraphs(link):
+def get_target_paragraphs(link: str) -> List[str]:
     """
     Get target paragraphs from the provided link.
 
@@ -150,7 +152,7 @@ def get_target_paragraphs(link):
     return []
 
 
-def create_user_data(postText: str, target_paragraphs: str, prediction: str) -> dict:
+def create_user_data(postText: str, target_paragraphs: List[str], prediction: str) -> Row:
     """
     Create user data from provided postText, target_paragraphs and prediction.
 
@@ -159,7 +161,7 @@ def create_user_data(postText: str, target_paragraphs: str, prediction: str) -> 
     :param prediction: prediction from the model
     :return: dictionary with postText, target_paragraphs and prediction
     """
-    data = dict()
+    data = Row()
     data["postText"] = postText
     data["targetParagraphs"] = target_paragraphs
     data["tags"] = [prediction]

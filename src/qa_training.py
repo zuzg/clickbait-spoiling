@@ -1,14 +1,12 @@
 import pandas as pd
 from datasets import Dataset
-from transformers import (
-    AutoTokenizer,
-    Trainer,
-    TrainingArguments,
-    AutoModelForQuestionAnswering,
-)
+from transformers.models.auto.modeling_auto import AutoModelForQuestionAnswering
+from transformers.models.auto.tokenization_auto import AutoTokenizer
+from transformers.trainer import Trainer
+from transformers.trainer_utils import IntervalStrategy
+from transformers.training_args import TrainingArguments
 
 from .data import read_data
-
 
 MODEL_CHECKPOINT = "deepset/roberta-base-squad2"
 TOKENIZER = AutoTokenizer.from_pretrained(MODEL_CHECKPOINT)
@@ -55,7 +53,9 @@ def tokenize_function(dataset: Dataset) -> dict:
     start_positions = []
     end_positions = []
 
-    for i, (context, answer, pos, offset) in enumerate(zip(contexts, answers, positions, offset_mapping)):
+    for i, (context, answer, pos, offset) in enumerate(
+        zip(contexts, answers, positions, offset_mapping)
+    ):
         start_char, end_char = flat_position(context, pos, answer[0])
         sequence_ids = inputs.sequence_ids(i)
 
@@ -112,7 +112,7 @@ def prepare_training(train_dataset: Dataset, eval_dataset: Dataset) -> Trainer:
 
     training_args = TrainingArguments(
         output_dir="./data/roberta-finetuned",
-        evaluation_strategy="epoch",
+        evaluation_strategy=IntervalStrategy.EPOCH,
         num_train_epochs=20,
         fp16=True,
     )
@@ -120,8 +120,8 @@ def prepare_training(train_dataset: Dataset, eval_dataset: Dataset) -> Trainer:
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
+        train_dataset=train_dataset,  # type: ignore
+        eval_dataset=eval_dataset,  # type: ignore
         tokenizer=TOKENIZER,
     )
     return trainer
