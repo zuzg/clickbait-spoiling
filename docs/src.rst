@@ -4,6 +4,14 @@ src package
 Submodules
 ----------
 
+src.bert\_classifier module
+---------------------------
+
+.. automodule:: src.bert_classifier
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 src.data module
 ---------------
 
@@ -20,10 +28,18 @@ src.evaluation module
    :undoc-members:
    :show-inheritance:
 
-src.qa\_inference module
-------------------------
+src.inference module
+--------------------
 
-.. automodule:: src.qa_inference
+.. automodule:: src.inference
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+src.plots module
+----------------
+
+.. automodule:: src.plots
    :members:
    :undoc-members:
    :show-inheritance:

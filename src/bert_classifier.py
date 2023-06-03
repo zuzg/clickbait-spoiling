@@ -33,7 +33,8 @@ class BertDataset(Dataset):
         """
         :param text: Input text
         :param index: Index of the text in the dataset
-        :return: Dictionary of input_ids, attention_mask, token_type_ids and target
+        :return: Dictionary of input_ids, attention_mask,
+        token_type_ids and target
         """
         inputs = self.tokenizer.encode_plus(
             text,
@@ -194,8 +195,9 @@ def prepare_input_bert_classifier(input_text, tokenizer, max_length=512):
 
 
 def predict_spoiler_class_from_text(
-    text: str, model: BERTClassifier, model_checkpoint: str = "bert-base-uncased"
-):
+        text: str,
+        model: BERTClassifier,
+        model_checkpoint: str = "bert-base-uncased"):
     """
     Predict spoiler class from text
 

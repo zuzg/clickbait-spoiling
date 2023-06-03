@@ -152,8 +152,9 @@ def get_target_paragraphs(link: str) -> List[str]:
 
 
 def create_user_data(
-    postText: str, target_paragraphs: List[str], prediction: str
-) -> dict:
+        postText: str,
+        target_paragraphs: List[str],
+        prediction: str) -> dict:
     """
     Create user data from provided postText, target_paragraphs and prediction.
 

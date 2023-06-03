@@ -50,9 +50,9 @@ def load_json_lines(f: str) -> list:
         fd = glob(f + "/*.json*")
         if len(fd) != 1:
             error(
-                "The input is an directory that contains multiple json files. Please create only a single json file. Got "
-                + str(fd)
-            )
+                """The input is an directory that contains multiple json files.
+                Please create only a single json file. Got """ +
+                str(fd))
         f = fd[0]
 
     with open(f, "r") as inp:
@@ -75,7 +75,8 @@ def load_json_lines(f: str) -> list:
     return ret
 
 
-def normalize_spoiler_generation(i: dict, expected_spoiler_type: str = "") -> Any:
+def normalize_spoiler_generation(i: dict,
+                                 expected_spoiler_type: str = "") -> Any:
     """
     Normalize spoiler generations
     :param i: spoiler generations
@@ -84,9 +85,9 @@ def normalize_spoiler_generation(i: dict, expected_spoiler_type: str = "") -> An
     """
     if "uuid" not in i or "spoiler" not in i:
         error(
-            "Spoiler generation does not have all required fields. Expected fields are uuid and spoiler. Got: "
-            + str(i)
-        )
+            """Spoiler generation does not have all required fields.
+            Expected fields are uuid and spoiler. Got: """ +
+            str(i))
         return
 
     if expected_spoiler_type and expected_spoiler_type not in i["tags"]:
@@ -125,7 +126,8 @@ def spoiler_generations_to_map(
             + " unique uuids."
         )
 
-    ln = [normalize_spoiler_generation(i, expected_spoiler_type) for i in predictions]
+    ln = [normalize_spoiler_generation(
+        i, expected_spoiler_type) for i in predictions]
     ln = [i for i in ln if i and i is not True]
 
     success("Spoiler generations have correct format. Found " + str(len(ln)))
@@ -148,8 +150,10 @@ def bleu_score(truth: list, prediction: list) -> float:
     """
 
     def stopfilter(tokens):
-        tmp = [token for token in tokens if token not in stopwords.words("english")]
-        res = [token.lower() for token in tmp if token not in string.punctuation]
+        tmp = [
+            t for t in tokens if t not in stopwords.words("english")]
+        res = [token.lower()
+               for token in tmp if token not in string.punctuation]
         return res
 
     def make_score(trut, predi):
@@ -174,15 +178,19 @@ def bleu_score(truth: list, prediction: list) -> float:
 
     for i in range(len(truth)):
         real_answer = truth[i]
-        if type(real_answer) is list:
+        if isinstance(real_answer, list):
             real_answer = " ".join(real_answer)
 
         pred_answer = prediction[i]
-        if type(pred_answer) is list:
+        if isinstance(pred_answer, list):
             pred_answer = " ".join(pred_answer)
 
-        lem_truth_tokens = stopfilter(word_tokenize(real_answer.replace("\n", "")))
-        lem_prediction_tokens = stopfilter(word_tokenize(pred_answer.replace("\n", "")))
+        lem_truth_tokens = stopfilter(
+            word_tokenize(
+                real_answer.replace(
+                    "\n", "")))
+        lem_prediction_tokens = stopfilter(
+            word_tokenize(pred_answer.replace("\n", "")))
         i_lem_score = make_score(lem_truth_tokens, lem_prediction_tokens)
         lem_score += i_lem_score  # type: ignore
 
@@ -220,14 +228,14 @@ def create_protobuf_for_task_2(actual: dict, expected: dict) -> dict:
 
     for k in keys:
         exp = expected[k]
-        if type(exp) is list:
+        if isinstance(exp, list):
             exp = " ".join(exp)
 
         y_true += [exp.replace("\n", " ").strip()]
 
         if k in actual:
             act = actual[k]
-            if type(act) is list:
+            if isinstance(act, list):
                 act = " ".join(act)
 
             y_pred += [act.replace("\n", " ").strip()]
@@ -260,7 +268,8 @@ def eval_task_2(
     if gt_spoilers_dict is None:
         result_dict["result-size"] = len(input_run_dict.keys())
         success(
-            "No ground-truth is passed. I tested the input run and the input run is valid."
+            """No ground-truth is passed.
+            I tested the input run and the input run is valid."""
         )
     else:
         for display_name, tag_name in [
@@ -293,7 +302,11 @@ def plot_scores(scores: dict) -> None:
     :return: none
     """
     plots = ["bleu", "bert", "size"]
-    labels = ["all-spoilers", "phrase-spoilers", "passage-spoilers", "multi-spoilers"]
+    labels = [
+        "all-spoilers",
+        "phrase-spoilers",
+        "passage-spoilers",
+        "multi-spoilers"]
     fig, axs = plt.subplots(1, 3, figsize=(12, 5))
     for i, p in enumerate(plots):
         axs[i].set_title(p)
@@ -313,7 +326,11 @@ def plot_comparison_scores(scores1: dict, scores2: dict) -> None:
     :return: none
     """
     plots = ["bleu", "bert"]
-    labels = ["all-spoilers", "phrase-spoilers", "passage-spoilers", "multi-spoilers"]
+    labels = [
+        "all-spoilers",
+        "phrase-spoilers",
+        "passage-spoilers",
+        "multi-spoilers"]
     fig, axs = plt.subplots(1, 2, figsize=(8, 5))
     x = np.arange(4)
     for i, p in enumerate(plots):
